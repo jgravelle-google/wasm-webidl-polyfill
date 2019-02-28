@@ -1,0 +1,3 @@
+*.idl_section
+*.wasm_code
+*.wasm
