@@ -1,9 +1,11 @@
 (module
   (import "host" "console_log"
+    ;; void console_log(char*)
     (func $console_log (param i32))
   )
   (import "host" "document_title"
-    (func $document_title (param i32 i32))
+    ;; int document_title(char*, int)
+    (func $document_title (param i32 i32) (result i32))
   )
 
   (import "env" "memory" (memory $0 256 256))
@@ -14,13 +16,22 @@
   (data (i32.const 16) "Hello world\00")
 
   (func $main
+    (local $ptr i32)
+
+    ;; console_log("Hello world")
     (call $console_log (i32.const 16))
 
-    (call $document_title
-      (i32.const 32)  ;; address = 32
-      (i32.const 128) ;; buffer size = 128
+    ;; ptr = 128
+    (local.set $ptr (i32.const 128))
+    ;; len = document_title(ptr, 128)
+    (drop
+      (call $document_title
+        (local.get $ptr)  ;; address
+        (i32.const 128) ;; buffer size = 128
+      )
     )
-    (call $console_log (i32.const 32))
+    ;; console_log(ptr)
+    (call $console_log (local.get $ptr))
   )
 
   (;webidl

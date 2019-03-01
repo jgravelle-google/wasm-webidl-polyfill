@@ -9,7 +9,12 @@ var moduleImports = {
     console_log: console.log,
     document_title: function() { return process.title; },
   },
+  lib: {
+    to_upper: function (c) {
+      return String.fromCharCode(c).toUpperCase().charCodeAt(0);
+    },
+  },
 };
 
-var main = webIDL.loadWasm('hello_world.wasm', moduleImports);
+var main = webIDL.loadWasm('to_upper.wasm', moduleImports);
 main.exports.main();
