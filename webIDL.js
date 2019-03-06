@@ -1,5 +1,8 @@
-function polyfill(module, memory, imports) {
-  var u8 = new Uint8Array(memory.buffer);
+function polyfill(module, imports) {
+  var memory = imports['env']['memory'];
+  var refMap = {};
+  var refs = [];
+  var u8 = memory && new Uint8Array(memory.buffer);
   function utf8_nullterm(ptr) {
     var result = '';
     var i = ptr;
@@ -19,6 +22,19 @@ function polyfill(module, memory, imports) {
   function native_wasm(x) {
     return x;
   }
+  function opaque_ptr_set(ref) {
+    var ptr = refs.length;
+    if (ref in refMap) {
+      ptr = refMap[ref];
+    } else {
+      refs.push(ref);
+      refMap[ref] = ptr;
+    }
+    return ptr;
+  }
+  function opaque_ptr_get(ptr) {
+    return refs[ptr];
+  }
 
   var webidlTypes = {
     0: 'domString',
@@ -28,6 +44,8 @@ function polyfill(module, memory, imports) {
     0: [utf8_nullterm, 1, [1, 0]],
     1: [utf8_outparam_buffer, 0, [1, 2]],
     2: [native_wasm, 1, [1, 0]],
+    3: [opaque_ptr_set, 1, [1, 0]],
+    4: [opaque_ptr_get, 1, [1, 0]],
   };
   var encoders = {};
   var decoders = {};
@@ -38,6 +56,7 @@ function polyfill(module, memory, imports) {
     var idx = 0;
 
     function readLEB() {
+      // TODO: don't assume LEBs are <128
       return bytes[idx++];
     }
     function readByte() {
@@ -145,10 +164,12 @@ function loadWasm(filename, imports) {
   }
 
   var module = new WebAssembly.Module(bytes);
-  var polyfilled = polyfill(module, imports.env.memory, imports);
+  var polyfilled = polyfill(module, imports);
   var instance = new WebAssembly.Instance(module, polyfilled);
   return instance;
 }
 
 
-module.exports = { polyfill, loadWasm }
+if (typeof require !== 'undefined') {
+  module.exports = { polyfill, loadWasm }
+}

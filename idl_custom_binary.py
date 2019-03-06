@@ -74,12 +74,15 @@ def parse_sexprs(text):
 WEBIDL_TYPES = {
   'domString': 0,
   'int': 1,
+  'anyref': 2,
 }
 
 BINDING_TYPES = {
   'utf8_nullterm': 0,
   'utf8_outparam_buffer': 1,
   'nativeWasm': 2,
+  'opaque_ptr_set': 3,
+  'opaque_ptr_get': 4,
 }
 
 def str_encode(text):

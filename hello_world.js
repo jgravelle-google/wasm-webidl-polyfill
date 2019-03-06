@@ -1,9 +1,8 @@
 var webIDL = require('./webIDL.js');
 
-var memory = new WebAssembly.Memory({ 'initial': 256, 'maximum': 256 });
 var moduleImports = {
   env: {
-    memory: memory,
+    memory: new WebAssembly.Memory({ 'initial': 256, 'maximum': 256 }),
   },
   host: {
     console_log: console.log,
@@ -11,5 +10,5 @@ var moduleImports = {
   },
 };
 
-var main = webIDL.loadWasm('hello_world.wasm', moduleImports);
-main.exports.main();
+var wasm = webIDL.loadWasm('hello_world.wasm', moduleImports);
+wasm.exports.main();
