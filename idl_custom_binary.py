@@ -83,6 +83,7 @@ BINDING_TYPES = {
   'nativeWasm': 2,
   'opaque_ptr_set': 3,
   'opaque_ptr_get': 4,
+  'utf8_constaddr_1024': 5,
 }
 
 def str_encode(text):
@@ -98,26 +99,30 @@ def parse_webidl(contents):
   }
   for subsection in sexprs:
     if subsection[0] == 'encode':
-      for i in xrange(1, len(subsection)):
-        sexp = subsection[i]
+      for sexp in subsection[1:]:
         ty = WEBIDL_TYPES[sexp[0]]
         binding = BINDING_TYPES[sexp[1]]
         data['encodes'].append([ty, binding])
     elif subsection[0] == 'decode':
-      for i in xrange(1, len(subsection)):
-        sexp = subsection[i]
+      for sexp in subsection[1:]:
         ty = WEBIDL_TYPES[sexp[0]]
         binding = BINDING_TYPES[sexp[1]]
         data['decodes'].append([ty, binding])
     elif subsection[0] == 'declarations':
-      for i in xrange(1, len(subsection)):
-        sexp = subsection[i]
-        kind = 0 if sexp[0] == 'import' else 1
-        namespace = sexp[1][1:-1]
-        name = sexp[2][1:-1]
+      for sexp in subsection[1:]:
+        if sexp[0] == 'import':
+          kind = 0
+          namespace = sexp[1][1:-1]
+          name = sexp[2][1:-1]
+          rest = sexp[3:]
+        else:
+          assert sexp[0] == 'export'
+          kind = 1
+          name = sexp[1][1:-1]
+          rest = sexp[2:]
         params = []
         results = []
-        for arg in sexp[3:]:
+        for arg in rest:
           if arg[0] == 'param':
             params += [WEBIDL_TYPES[x] for x in arg[1:]]
           elif arg[0] == 'result':
@@ -126,7 +131,7 @@ def parse_webidl(contents):
             assert False, 'Unexpected param kind: ' + arg[0]
         data['declarations'].append(
           [kind] +
-          str_encode(namespace) +
+          (str_encode(namespace) if kind == 0 else []) +
           str_encode(name) +
           leb_u32(len(params)) + params +
           leb_u32(len(results)) + results

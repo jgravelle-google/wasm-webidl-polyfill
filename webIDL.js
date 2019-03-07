@@ -19,6 +19,13 @@ function polyfill(module, imports) {
     }
     return len;
   }
+  function utf8_constaddr_1024(str) {
+    var constaddr = 1024;
+    for (var i = 0; i < str.length; ++i) {
+      u8[constaddr + i] = str.charCodeAt(i);
+    }
+    return constaddr;
+  }
   function native_wasm(x) {
     return x;
   }
@@ -46,9 +53,11 @@ function polyfill(module, imports) {
     2: [native_wasm, 1, [1, 0]],
     3: [opaque_ptr_set, 1, [1, 0]],
     4: [opaque_ptr_get, 1, [1, 0]],
+    5: [utf8_constaddr_1024, 2, [1, 0]],
   };
   var encoders = {};
   var decoders = {};
+  var exportFixups = {};
 
   var bindingSections = WebAssembly.Module.customSections(module, 'webIDLBindings');
   for (var section = 0; section < bindingSections.length; ++section) {
@@ -70,11 +79,11 @@ function polyfill(module, imports) {
       }
       return result;
     }
-    function readList() {
+    function readList(f) {
       var len = readByte();
       var result = [];
       for (var i = 0; i < len; ++i) {
-        result.push(readByte());
+        result.push(f());
       }
       return result;
     }
@@ -92,12 +101,14 @@ function polyfill(module, imports) {
       decoders[ty] = enc;
     }
 
-    function bind(f, params, results) {
+    function bind(f, params, results, isImport) {
+      var convertParam = isImport ? encoders : decoders;
+      var convertResult = isImport ? decoders : encoders;
       return function() {
         var argIdx = 0;
         var args = [];
         for (var i = 0; i < params.length; ++i) {
-          var enc = bindingTypes[encoders[params[i]]];
+          var enc = bindingTypes[convertParam[params[i]]];
           var encF = enc[0];
           var nArgs = enc[1];
           if (nArgs > 0) {
@@ -105,12 +116,12 @@ function polyfill(module, imports) {
             for (var j = 0; j < nArgs; ++j) {
               encArgs.push(arguments[argIdx++]);
             }
-            args.push(encF(encArgs));
+            args.push(encF.apply(null, encArgs));
           }
         }
         var result = f.apply(null, args);
         for (var i = 0; i < results.length; ++i) {
-          var dec = bindingTypes[decoders[results[i]]];
+          var dec = bindingTypes[convertResult[results[i]]];
           var decF = dec[0];
           var nArgs = dec[2][1];
           var decArgs = [result];
@@ -121,16 +132,26 @@ function polyfill(module, imports) {
         }
       };
     }
+    function makeExporter(param, result) {
+      return function(f) {
+        return bind(f, param, result, false);
+      }
+    }
 
     var numDecls = readLEB();
     for (var i = 0; i < numDecls; ++i) {
       var kind = readByte();
-      var namespace = readStr();
-      var name = readStr();
-      var params = readList();
-      var results = readList();
+      var namespace = '';
       if (kind == 0) {
-        imports[namespace][name] = bind(imports[namespace][name], params, results);
+        namespace = readStr();
+      }
+      var name = readStr();
+      var params = readList(readByte);
+      var results = readList(readByte);
+      if (kind == 0) {
+        imports[namespace][name] = bind(imports[namespace][name], params, results, true);
+      } else if (kind == 1) {
+        exportFixups[name] = makeExporter(params, results);
       }
     }
   }
@@ -149,7 +170,7 @@ function polyfill(module, imports) {
   //   bindingTypes[1](res, ptr, len);
   // };
 
-  return imports;
+  return exportFixups;
 }
 
 
@@ -164,9 +185,24 @@ function loadWasm(filename, imports) {
   }
 
   var module = new WebAssembly.Module(bytes);
-  var polyfilled = polyfill(module, imports);
-  var instance = new WebAssembly.Instance(module, polyfilled);
-  return instance;
+  var fixups = polyfill(module, imports);
+  var instance = new WebAssembly.Instance(module, imports);
+
+  // Actual WebAssembly.Instance exports are Read-Only, so we have to create a
+  // fake object here
+  var fakeExports = {};
+  for (var name in instance.exports) {
+    fakeExports[name] = instance.exports[name];
+  }
+  for (var name in fixups) {
+    fakeExports[name] = fixups[name](fakeExports[name]);
+  }
+  var fakeInstance = {};
+  for (var name in instance) {
+    fakeInstance[name] = instance[name];
+  }
+  fakeInstance.exports = fakeExports;
+  return fakeInstance;
 }
 
 
