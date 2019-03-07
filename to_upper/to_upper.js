@@ -15,5 +15,5 @@ var moduleImports = {
   },
 };
 
-var wasm = webIDL.loadWasm('to_upper.wasm', moduleImports);
+var wasm = webIDL.loadWasm('to_upper/to_upper.wasm', moduleImports);
 wasm.exports.main();

@@ -1,3 +1,4 @@
 *.idl_section
 *.wasm_code
 *.wasm
+*/webIDL.js

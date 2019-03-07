@@ -10,5 +10,5 @@ var moduleImports = {
   },
 };
 
-var wasm = webIDL.loadWasm('hello_world.wasm', moduleImports);
+var wasm = webIDL.loadWasm('hello_world/hello_world.wasm', moduleImports);
 wasm.exports.main();
