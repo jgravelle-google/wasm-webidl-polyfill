@@ -26,6 +26,13 @@ function polyfill(module, imports) {
     }
     return constaddr;
   }
+  function utf8_ptr_len(ptr, len) {
+    var result = ''
+    for (var i = 0; i < len; ++i) {
+      result += String.fromCharCode(u8[ptr + i]);
+    }
+    return result;
+  }
   function native_wasm(x) {
     return x;
   }
@@ -54,6 +61,7 @@ function polyfill(module, imports) {
     3: [opaque_ptr_set, 1, [1, 0]],
     4: [opaque_ptr_get, 1, [1, 0]],
     5: [utf8_constaddr_1024, 2, [1, 0]],
+    6: [utf8_ptr_len, 2, [1, 0]],
   };
   var encoders = {};
   var decoders = {};

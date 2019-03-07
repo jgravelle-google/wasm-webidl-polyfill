@@ -8,6 +8,10 @@
 
 (func $init (export "init")
   (global.set $console (call $getConsole))
+  (call $log
+    (global.get $console)
+    (i32.const 16)
+  )
 )
 
 (func $cLog (export "cLog") (param $ptr i32)

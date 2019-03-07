@@ -84,6 +84,7 @@ BINDING_TYPES = {
   'opaque_ptr_set': 3,
   'opaque_ptr_get': 4,
   'utf8_constaddr_1024': 5,
+  'utf8_ptr_len': 6,
 }
 
 def str_encode(text):
