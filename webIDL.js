@@ -3,7 +3,7 @@ function polyfill(module, imports) {
   var refMap = {};
   var refs = [];
   var u8 = memory && new Uint8Array(memory.buffer);
-  function utf8_nullterm(ptr) {
+  function utf8_cstr(ptr) {
     var result = '';
     var i = ptr;
     while (u8[i] != 0) {
@@ -51,17 +51,10 @@ function polyfill(module, imports) {
   }
 
   var webidlTypes = {
-    0: 'domString',
+    0: 'DOMString',
   }
-  var bindingTypes = {
-    // enum: [function, numParams, [numResults, numResultParams]]
-    0: [utf8_nullterm, 1, [1, 0]],
-    1: [utf8_outparam_buffer, 0, [1, 2]],
-    2: [native_wasm, 1, [1, 0]],
-    3: [opaque_ptr_set, 1, [1, 0]],
-    4: [opaque_ptr_get, 1, [1, 0]],
-    5: [utf8_constaddr_1024, 2, [1, 0]],
-    6: [utf8_ptr_len, 2, [1, 0]],
+  var outgoingBindingTypes = {
+    0: [utf8_cstr],
   };
   var encoders = {};
   var decoders = {};
@@ -96,17 +89,16 @@ function polyfill(module, imports) {
       return result;
     }
 
-    var numEncodes = readLEB();
-    for (var i = 0; i < numEncodes; ++i) {
+    function readOutgoing() {
+      var kind = readByte();
       var ty = readByte();
-      var enc = readByte();
-      encoders[ty] = enc;
-    }
-    var numDecodes = readLEB();
-    for (var i = 0; i < numDecodes; ++i) {
-      var ty = readByte();
-      var enc = readByte();
-      decoders[ty] = enc;
+      var off = readByte();
+      if (kind == 0) {
+        return {
+          func: utf8_cstr,
+          args: [off],
+        };
+      }
     }
 
     function bind(f, params, results, isImport) {
@@ -140,6 +132,20 @@ function polyfill(module, imports) {
         }
       };
     }
+    function bindImport(f, params, results) {
+      return function() {
+        var args = [];
+        for (var i = 0; i < params.length; ++i) {
+          var param = params[i];
+          var encArgs = [];
+          for (var j = 0; j < param.args.length; ++j) {
+            encArgs.push(arguments[param.args[j]]);
+          }
+          args.push(param.func.apply(null, encArgs));
+        }
+        return f.apply(null, args);
+      };
+    }
     function makeExporter(param, result) {
       return function(f) {
         return bind(f, param, result, false);
@@ -149,17 +155,14 @@ function polyfill(module, imports) {
     var numDecls = readLEB();
     for (var i = 0; i < numDecls; ++i) {
       var kind = readByte();
-      var namespace = '';
       if (kind == 0) {
-        namespace = readStr();
-      }
-      var name = readStr();
-      var params = readList(readByte);
-      var results = readList(readByte);
-      if (kind == 0) {
-        imports[namespace][name] = bind(imports[namespace][name], params, results, true);
+        var namespace = readStr();
+        var name = readStr();
+        var params = readList(readOutgoing);
+        var results = [];
+        imports[namespace][name] = bindImport(imports[namespace][name], params, results);
       } else if (kind == 1) {
-        exportFixups[name] = makeExporter(params, results);
+        // exportFixups[name] = makeExporter(params, results);
       }
     }
   }

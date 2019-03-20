@@ -43,8 +43,7 @@ def custom_section_binary(section_name, data):
   return (
     [0] + # custom section
     size_leb + # payload_len
-    [len(section_name)] + # name_len
-    [ord(c) for c in section_name] +
+    str_encode(section_name) +
     data
   )
 
@@ -72,82 +71,58 @@ def parse_sexprs(text):
   return stack[0]
 
 WEBIDL_TYPES = {
-  'domString': 0,
-  'int': 1,
-  'anyref': 2,
+  'DOMString': 0,
 }
 
-BINDING_TYPES = {
-  'utf8_nullterm': 0,
-  'utf8_outparam_buffer': 1,
-  'nativeWasm': 2,
-  'opaque_ptr_set': 3,
-  'opaque_ptr_get': 4,
-  'utf8_constaddr_1024': 5,
-  'utf8_ptr_len': 6,
+OUTGOING_BINDING_TYPES = {
+  'utf8-cstr': 0,
 }
 
 def str_encode(text):
   return leb_u32(len(text)) + [ord(c) for c in text]
 
 def parse_webidl(contents):
-  idl_section = contents.split('(;webidl')[1].split('webidl;)')[0].strip()
-  sexprs = parse_sexprs(idl_section)
-  data = {
-    'encodes': [],
-    'decodes': [],
-    'declarations': [],
-  }
-  for subsection in sexprs:
-    if subsection[0] == 'encode':
-      for sexp in subsection[1:]:
-        ty = WEBIDL_TYPES[sexp[0]]
-        binding = BINDING_TYPES[sexp[1]]
-        data['encodes'].append([ty, binding])
-    elif subsection[0] == 'decode':
-      for sexp in subsection[1:]:
-        ty = WEBIDL_TYPES[sexp[0]]
-        binding = BINDING_TYPES[sexp[1]]
-        data['decodes'].append([ty, binding])
-    elif subsection[0] == 'declarations':
-      for sexp in subsection[1:]:
-        if sexp[0] == 'import':
-          kind = 0
-          namespace = sexp[1][1:-1]
-          name = sexp[2][1:-1]
-          rest = sexp[3:]
-        else:
-          assert sexp[0] == 'export'
-          kind = 1
-          name = sexp[1][1:-1]
-          rest = sexp[2:]
-        params = []
-        results = []
-        for arg in rest:
-          if arg[0] == 'param':
-            params += [WEBIDL_TYPES[x] for x in arg[1:]]
-          elif arg[0] == 'result':
-            results += [WEBIDL_TYPES[x] for x in arg[1:]]
-          else:
-            assert False, 'Unexpected param kind: ' + arg[0]
-        data['declarations'].append(
-          [kind] +
-          (str_encode(namespace) if kind == 0 else []) +
-          str_encode(name) +
-          leb_u32(len(params)) + params +
-          leb_u32(len(results)) + results
-        )
-
   def flatten(lst):
     return [item for sublist in lst for item in sublist]
   def segment(part):
     return leb_u32(len(part)) + flatten(part)
+  def outgoingBytes(sexpr):
+    head = sexpr[0]
+    if head == 'utf8-cstr':
+      assert sexpr[1][0] == 'type'
+      assert sexpr[2][0] == 'off-idx'
+      ty = WEBIDL_TYPES[sexpr[1][1]]
+      off = int(sexpr[2][1])
+      return [OUTGOING_BINDING_TYPES[head], ty, off]
 
-  return (
-    segment(data['encodes']) +
-    segment(data['decodes']) +
-    segment(data['declarations'])
-  )
+  idl_section = contents.split('(;webidl')[1].split('webidl;)')[0].strip()
+  sexprs = parse_sexprs(idl_section)
+  data = []
+  for elem in sexprs:
+    assert elem[0] == 'webidl-func-binding'
+    if elem[1] == 'import':
+      namespace = elem[2][1:-1]
+      name = elem[3][1:-1]
+
+      params = []
+      returns = []
+      for x in elem[4:]:
+        if x[0] == "param":
+          for param in x[1:]:
+            params.append(outgoingBytes(param))
+        else:
+          assert x[0] == "return"
+      import_byte = 0
+      data.append([import_byte] +
+        str_encode(namespace) +
+        str_encode(name) +
+        segment(params) +
+        segment(returns)
+      )
+    else:
+      assert elem[1] == "export"
+
+  return segment(data)
 
 def main(args):
   assert len(args) == 2, "Must have infile and outfile (in that order)"

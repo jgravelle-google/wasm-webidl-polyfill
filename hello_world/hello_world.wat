@@ -20,28 +20,24 @@
   ;; console_log("Hello world")
   (call $console_log (i32.const 16))
 
-  ;; ptr = 128
-  (local.set $ptr (i32.const 128))
-  ;; len = document_title(ptr, 128)
-  (drop
-    (call $document_title
-      (local.get $ptr)  ;; address
-      (i32.const 128) ;; buffer size = 128
-    )
-  )
-  ;; console_log(ptr)
-  (call $console_log (local.get $ptr))
+  ;; ;; ptr = 128
+  ;; (local.set $ptr (i32.const 128))
+  ;; ;; len = document_title(ptr, 128)
+  ;; (drop
+  ;;   (call $document_title
+  ;;     (local.get $ptr)  ;; address
+  ;;     (i32.const 128) ;; buffer size = 128
+  ;;   )
+  ;; )
+  ;; ;; console_log(ptr)
+  ;; (call $console_log (local.get $ptr))
 )
 
 (;webidl
-  (encode
-    (domString utf8_nullterm)
-  )
-  (decode
-    (domString utf8_outparam_buffer)
-  )
-  (declarations
-    (import "host" "console_log" (param domString))
-    (import "host" "document_title" (result domString))
+  (webidl-func-binding
+    import "host" "console_log"
+    (param
+      (utf8-cstr (type DOMString) (off-idx 0))
+    )
   )
 webidl;)
