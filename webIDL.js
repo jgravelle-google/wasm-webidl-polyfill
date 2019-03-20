@@ -1,4 +1,4 @@
-function polyfill(module, imports) {
+function polyfill(module, imports, getExports) {
   var memory = imports['env']['memory'];
   var refMap = {};
   var refs = [];
@@ -19,12 +19,13 @@ function polyfill(module, imports) {
     }
     return len;
   }
-  function utf8_constaddr_1024(str) {
-    var constaddr = 1024;
+  function alloc_utf8_cstr(name, str) {
+    var addr = getExports()[name](str.length + 1);
     for (var i = 0; i < str.length; ++i) {
-      u8[constaddr + i] = str.charCodeAt(i);
+      u8[addr + i] = str.charCodeAt(i);
     }
-    return constaddr;
+    u8[addr + str.length] = 0;
+    return addr;
   }
   function utf8_ptr_len(ptr, len) {
     var result = ''
@@ -91,9 +92,9 @@ function polyfill(module, imports) {
 
     function readOutgoing() {
       var kind = readByte();
-      var ty = readByte();
-      var off = readByte();
-      if (kind == 0) {
+      if (kind == 0) { // utf8-cstr
+        var ty = readByte();
+        var off = readByte();
         return {
           func: utf8_cstr,
           args: [off],
@@ -101,54 +102,42 @@ function polyfill(module, imports) {
       }
     }
 
-    function bind(f, params, results, isImport) {
-      var convertParam = isImport ? encoders : decoders;
-      var convertResult = isImport ? decoders : encoders;
-      return function() {
-        var argIdx = 0;
-        var args = [];
-        for (var i = 0; i < params.length; ++i) {
-          var enc = bindingTypes[convertParam[params[i]]];
-          var encF = enc[0];
-          var nArgs = enc[1];
-          if (nArgs > 0) {
-            var encArgs = [];
-            for (var j = 0; j < nArgs; ++j) {
-              encArgs.push(arguments[argIdx++]);
-            }
-            args.push(encF.apply(null, encArgs));
-          }
+    function readIncoming() {
+      var kind = readByte();
+      if (kind == 0) { // alloc-utf8-cstr
+        var name = readStr();
+        return {
+          func: alloc_utf8_cstr,
+          args: [name],
         }
-        var result = f.apply(null, args);
-        for (var i = 0; i < results.length; ++i) {
-          var dec = bindingTypes[convertResult[results[i]]];
-          var decF = dec[0];
-          var nArgs = dec[2][1];
-          var decArgs = [result];
-          for (var j = 0; j < nArgs; ++j) {
-            decArgs.push(arguments[argIdx++]);
-          }
-          return decF.apply(null, decArgs);
-        }
-      };
+      }
     }
+
     function bindImport(f, params, results) {
       return function() {
         var args = [];
         for (var i = 0; i < params.length; ++i) {
           var param = params[i];
-          var encArgs = [];
+          var incArgs = [];
           for (var j = 0; j < param.args.length; ++j) {
-            encArgs.push(arguments[param.args[j]]);
+            incArgs.push(arguments[param.args[j]]);
           }
-          args.push(param.func.apply(null, encArgs));
+          args.push(param.func.apply(null, incArgs));
         }
-        return f.apply(null, args);
+        var retVal = f.apply(null, args);
+        if (results.length > 0) {
+          var result = results[0]; // todo: multi-return?
+          var outArgs = result.args.slice();
+          outArgs.push(retVal);
+          retVal = result.func.apply(null, outArgs);
+        }
+        return retVal;
       };
     }
     function makeExporter(param, result) {
       return function(f) {
-        return bind(f, param, result, false);
+        // maybe this works? TODO, find out
+        return bindImport(f, param, result);
       }
     }
 
@@ -159,10 +148,13 @@ function polyfill(module, imports) {
         var namespace = readStr();
         var name = readStr();
         var params = readList(readOutgoing);
-        var results = [];
+        var results = readList(readIncoming);
         imports[namespace][name] = bindImport(imports[namespace][name], params, results);
       } else if (kind == 1) {
-        // exportFixups[name] = makeExporter(params, results);
+        var name = readStr();
+        var params = readList(readIncoming);
+        var results = readList(readOutgoing);
+        exportFixups[name] = makeExporter(params, results);
       }
     }
   }
@@ -196,8 +188,12 @@ function loadWasm(filename, imports) {
   }
 
   var module = new WebAssembly.Module(bytes);
-  var fixups = polyfill(module, imports);
-  var instance = new WebAssembly.Instance(module, imports);
+  var instance;
+  function getExports() {
+    return instance.exports;
+  }
+  var fixups = polyfill(module, imports, getExports);
+  instance = new WebAssembly.Instance(module, imports);
 
   // Actual WebAssembly.Instance exports are Read-Only, so we have to create a
   // fake object here
@@ -216,7 +212,7 @@ function loadWasm(filename, imports) {
   return fakeInstance;
 }
 
-
-if (typeof require !== 'undefined') {
+var isNodeJS = typeof require !== 'undefined';
+if (isNodeJS) {
   module.exports = { polyfill, loadWasm }
 }

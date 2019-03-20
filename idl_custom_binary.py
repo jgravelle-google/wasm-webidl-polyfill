@@ -74,10 +74,6 @@ WEBIDL_TYPES = {
   'DOMString': 0,
 }
 
-OUTGOING_BINDING_TYPES = {
-  'utf8-cstr': 0,
-}
-
 def str_encode(text):
   return leb_u32(len(text)) + [ord(c) for c in text]
 
@@ -91,10 +87,17 @@ def parse_webidl(contents):
     if head == 'utf8-cstr':
       assert sexpr[1][0] == 'type'
       assert sexpr[2][0] == 'off-idx'
+      idByte = 0
       ty = WEBIDL_TYPES[sexpr[1][1]]
       off = int(sexpr[2][1])
-      return [OUTGOING_BINDING_TYPES[head], ty, off]
-
+      return [idByte, ty, off]
+  def incomingBytes(sexpr):
+    head = sexpr[0]
+    if head == 'alloc-utf8-cstr':
+      assert sexpr[1][0] == 'alloc-export'
+      idByte = 0
+      name = sexpr[1][1][1:-1]
+      return [idByte] + str_encode(name)
   idl_section = contents.split('(;webidl')[1].split('webidl;)')[0].strip()
   sexprs = parse_sexprs(idl_section)
   data = []
@@ -105,19 +108,21 @@ def parse_webidl(contents):
       name = elem[3][1:-1]
 
       params = []
-      returns = []
+      results = []
       for x in elem[4:]:
         if x[0] == "param":
           for param in x[1:]:
             params.append(outgoingBytes(param))
         else:
-          assert x[0] == "return"
+          assert x[0] == "result"
+          for result in x[1:]:
+            results.append(incomingBytes(result))
       import_byte = 0
       data.append([import_byte] +
         str_encode(namespace) +
         str_encode(name) +
         segment(params) +
-        segment(returns)
+        segment(results)
       )
     else:
       assert elem[1] == "export"
