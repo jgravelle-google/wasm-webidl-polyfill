@@ -19,8 +19,9 @@ function polyfill(module, imports, getExports) {
     }
     return len;
   }
-  function alloc_utf8_cstr(name, str) {
-    var addr = getExports()[name](str.length + 1);
+  function alloc_utf8_cstr(args) {
+    var str = this.inExpr(args);
+    var addr = getExports()[this.name](str.length + 1);
     for (var i = 0; i < str.length; ++i) {
       u8[addr + i] = str.charCodeAt(i);
     }
@@ -102,13 +103,24 @@ function polyfill(module, imports, getExports) {
       }
     }
 
+    function readInExpr() {
+      var kind = readByte();
+      if (kind == 0) { // get
+        var idx = readByte();
+        return function(args) {
+          return args[idx];
+        };
+      }
+    }
     function readIncoming() {
       var kind = readByte();
       if (kind == 0) { // alloc-utf8-cstr
         var name = readStr();
+        var inExpr = readInExpr();
         return {
           func: alloc_utf8_cstr,
-          args: [name],
+          name,
+          inExpr,
         }
       }
     }
@@ -127,9 +139,7 @@ function polyfill(module, imports, getExports) {
         var retVal = f.apply(null, args);
         if (results.length > 0) {
           var result = results[0]; // todo: multi-return?
-          var outArgs = result.args.slice();
-          outArgs.push(retVal);
-          retVal = result.func.apply(null, outArgs);
+          retVal = result.func.apply(result, [[retVal]]);
         }
         return retVal;
       };

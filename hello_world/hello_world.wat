@@ -40,7 +40,7 @@
   (webidl-func-binding
     import "host" "document_title"
     (result
-      (alloc-utf8-cstr (alloc-export "alloc"))
+      (alloc-utf8-cstr (alloc-export "alloc") (get 0))
     )
   )
 webidl;)

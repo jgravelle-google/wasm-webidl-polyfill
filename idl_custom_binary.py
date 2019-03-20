@@ -91,13 +91,20 @@ def parse_webidl(contents):
       ty = WEBIDL_TYPES[sexpr[1][1]]
       off = int(sexpr[2][1])
       return [idByte, ty, off]
+  def inExpr(sexpr):
+    head = sexpr[0]
+    if head == 'get':
+      idByte = 0
+      off = int(sexpr[1])
+      return [idByte, off]
   def incomingBytes(sexpr):
     head = sexpr[0]
     if head == 'alloc-utf8-cstr':
       assert sexpr[1][0] == 'alloc-export'
       idByte = 0
       name = sexpr[1][1][1:-1]
-      return [idByte] + str_encode(name)
+      expr = inExpr(sexpr[2])
+      return [idByte] + str_encode(name) + expr
   idl_section = contents.split('(;webidl')[1].split('webidl;)')[0].strip()
   sexprs = parse_sexprs(idl_section)
   data = []
