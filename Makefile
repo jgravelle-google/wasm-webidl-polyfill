@@ -8,5 +8,9 @@ sharing/main.wasm \
 all: $(FILES)
 .PHONY: all
 
+clean:
+	rm -f $(FILES)
+.PHONY: clean
+
 %.wasm: %.wat webIDL.js
 	python make_wasm.py $^

@@ -3,25 +3,25 @@
   (func $console_log (param i32))
 )
 (import "host" "document_title"
-  ;; int document_title(char*, int)
-  (func $document_title (result i32))
+  ;; (int, int) document_title()
+  (func $document_title (result i32 i32))
 )
 
 (import "env" "memory" (memory $0 256 256))
 
-(export "main" (func $main))
-
 ;; C-style string
 (data (i32.const 16) "Hello world\00")
 
-(func $main
+(func $main (export "main")
   (local $ptr i32)
 
   ;; console_log("Hello world")
   (call $console_log (i32.const 16))
 
   ;; ptr = document_title()
-  (local.set $ptr (call $document_title))
+  (call $document_title)
+  (local.set $ptr)
+  (drop)
   ;; console_log(ptr)
   (call $console_log (local.get $ptr))
 )

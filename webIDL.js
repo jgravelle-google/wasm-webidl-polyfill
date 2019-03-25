@@ -26,7 +26,7 @@ function polyfill(module, imports, getExports) {
       u8[addr + i] = str.charCodeAt(i);
     }
     u8[addr + str.length] = 0;
-    return addr;
+    return [addr, str.length];
   }
   function utf8_ptr_len(ptr, len) {
     var result = ''

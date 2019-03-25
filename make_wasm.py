@@ -14,7 +14,10 @@ wasm = base + '.wasm'
 def run(cmd):
   return subprocess.check_output(cmd)
 
-run([wasm2wat, wat, '-o', code])
+flags = [
+  '--enable-multi-value',
+]
+run([wasm2wat, wat, '-o', code] + flags)
 run(['python', 'idl_custom_binary.py', wat, idl])
 result = run(['cat', code, idl])
 with open(wasm, 'w') as f:

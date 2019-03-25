@@ -1,4 +1,5 @@
-var webIDL = require('./webIDL.js');
+// var webIDL = require('./webIDL.js');
+load('webIDL.js'); var webIDL = {loadWasm};
 
 var moduleImports = {
   env: {
