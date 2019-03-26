@@ -21,6 +21,8 @@
 )
 
 (;webidl
+  (webidl-type $any any)
+  (webidl-type $string DOMString)
   (webidl-func-binding
     import "host" "getConsole"
     (result
@@ -30,8 +32,8 @@
   (webidl-func-binding
     import "host" "log"
     (param
-      (as (webidl-type any) (idx 0))
-      (utf8-cstr (type DOMString) (off-idx 1))
+      (as (webidl-type $any) (idx 0))
+      (utf8-cstr (type $string) (off-idx 1))
     )
   )
 webidl;)

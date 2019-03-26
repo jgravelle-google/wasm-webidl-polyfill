@@ -31,10 +31,11 @@
 )
 
 (;webidl
+  (webidl-type $string DOMString)
   (webidl-func-binding
     import "host" "console_log"
     (param
-      (utf8-cstr (type DOMString) (off-idx 0))
+      (utf8-cstr (type $string) (off-idx 0))
     )
   )
   (webidl-func-binding

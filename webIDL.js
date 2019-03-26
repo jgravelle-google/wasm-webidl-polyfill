@@ -68,14 +68,14 @@ function polyfill(module, imports, getExports) {
   var bindingSections = WebAssembly.Module.customSections(module, 'webIDLBindings');
   for (var section = 0; section < bindingSections.length; ++section) {
     var bytes = new Uint8Array(bindingSections[section]);
-    var idx = 0;
+    var byteIndex = 0;
 
     function readLEB() {
       // TODO: don't assume LEBs are <128
-      return bytes[idx++];
+      return bytes[byteIndex++];
     }
     function readByte() {
-      return bytes[idx++];
+      return bytes[byteIndex++];
     }
     function readStr() {
       var len = readByte();
@@ -166,6 +166,13 @@ function polyfill(module, imports, getExports) {
         // maybe this works? TODO, find out
         return bindImport(f, param, result);
       }
+    }
+
+    var numTypes = readLEB();
+    for (var i = 0; i < numTypes; ++i) {
+      // skip doing anything with types for now
+      // assumption, types are all 1 byte long, this will change
+      readByte();
     }
 
     var numDecls = readLEB();

@@ -4,6 +4,18 @@ import json
 import os
 import sys
 
+WEBIDL_TYPES = {
+  'any': 0,
+  'DOMString': 1,
+}
+WASM_TYPES = {
+  "i32": 0x7f,
+  "i64": 0x7e,
+  "f32": 0x7d,
+  "f64": 0x7c,
+  "anyref": 0x6f,
+}
+
 def leb_u32(value):
   assert value >= 0, "Unsigned LEBs must have signed value"
   leb = []
@@ -70,67 +82,31 @@ def parse_sexprs(text):
       cur += c
   return stack[0]
 
-WEBIDL_TYPES = {
-  'any': 0,
-  'DOMString': 1,
-}
-WASM_TYPES = {
-  "i32": 0x7f,
-  "i64": 0x7e,
-  "f32": 0x7d,
-  "f64": 0x7c,
-  "anyref": 0x6f,
-}
-
 def str_encode(text):
   return leb_u32(len(text)) + [ord(c) for c in text]
 
 def parse_webidl(contents):
-  def flatten(lst):
-    return [item for sublist in lst for item in sublist]
-  def segment(part):
-    return leb_u32(len(part)) + flatten(part)
-  def outgoingBytes(sexpr):
-    head = sexpr[0]
-    if head == 'as':
-      assert sexpr[1][0] == 'webidl-type'
-      assert sexpr[2][0] == 'idx'
-      idByte = 0
-      ty = WEBIDL_TYPES[sexpr[1][1]]
-      off = int(sexpr[2][1])
-      return [idByte, ty, off]
-    elif head == 'utf8-cstr':
-      assert sexpr[1][0] == 'type'
-      assert sexpr[2][0] == 'off-idx'
-      idByte = 1
-      ty = WEBIDL_TYPES[sexpr[1][1]]
-      off = int(sexpr[2][1])
-      return [idByte, ty, off]
-  def inExpr(sexpr):
-    head = sexpr[0]
-    if head == 'get':
-      idByte = 0
-      off = int(sexpr[1])
-      return [idByte, off]
-  def incomingBytes(sexpr):
-    head = sexpr[0]
-    if head == 'as':
-      assert sexpr[1][0] == 'wasm-type'
-      idByte = 0
-      ty = WASM_TYPES[sexpr[1][1]]
-      expr = inExpr(sexpr[2])
-      return [idByte, ty] + expr
-    elif head == 'alloc-utf8-cstr':
-      assert sexpr[1][0] == 'alloc-export'
-      idByte = 1
-      name = sexpr[1][1][1:-1]
-      expr = inExpr(sexpr[2])
-      return [idByte] + str_encode(name) + expr
   idl_section = contents.split('(;webidl')[1].split('webidl;)')[0].strip()
   sexprs = parse_sexprs(idl_section)
+
+  # parse types
+  type_map = {}
+  type_bytes = []
+  for elem in sexprs:
+    if elem[0] != 'webidl-type':
+      continue
+    name = elem[1]
+    assert name[0] == '$'
+    print 'found a name:', name
+    index = len(type_map)
+    type_map[name] = len(type_map)
+    type_bytes.append([WEBIDL_TYPES[elem[2]]])
+
+  # parse func bindings
   data = []
   for elem in sexprs:
-    assert elem[0] == 'webidl-func-binding'
+    if elem[0] != 'webidl-func-binding':
+      continue
     if elem[1] == 'import':
       namespace = elem[2][1:-1]
       name = elem[3][1:-1]
@@ -140,7 +116,7 @@ def parse_webidl(contents):
       for x in elem[4:]:
         if x[0] == "param":
           for param in x[1:]:
-            params.append(outgoingBytes(param))
+            params.append(outgoingBytes(param, type_map))
         else:
           assert x[0] == "result"
           for result in x[1:]:
@@ -155,7 +131,50 @@ def parse_webidl(contents):
     else:
       assert elem[1] == "export"
 
-  return segment(data)
+  return segment(type_bytes) + segment(data)
+
+def flatten(lst):
+  return [item for sublist in lst for item in sublist]
+def segment(part):
+  return leb_u32(len(part)) + flatten(part)
+
+def outgoingBytes(sexpr, type_map):
+  head = sexpr[0]
+  if head == 'as':
+    assert sexpr[1][0] == 'webidl-type'
+    assert sexpr[2][0] == 'idx'
+    idByte = 0
+    ty = type_map[sexpr[1][1]]
+    off = int(sexpr[2][1])
+    return [idByte, ty, off]
+  elif head == 'utf8-cstr':
+    assert sexpr[1][0] == 'type'
+    assert sexpr[2][0] == 'off-idx'
+    idByte = 1
+    ty = type_map[sexpr[1][1]]
+    off = int(sexpr[2][1])
+    return [idByte, ty, off]
+
+def incomingBytes(sexpr):
+  head = sexpr[0]
+  if head == 'as':
+    assert sexpr[1][0] == 'wasm-type'
+    idByte = 0
+    ty = WASM_TYPES[sexpr[1][1]]
+    expr = inExpr(sexpr[2])
+    return [idByte, ty] + expr
+  elif head == 'alloc-utf8-cstr':
+    assert sexpr[1][0] == 'alloc-export'
+    idByte = 1
+    name = sexpr[1][1][1:-1]
+    expr = inExpr(sexpr[2])
+    return [idByte] + str_encode(name) + expr
+def inExpr(sexpr):
+  head = sexpr[0]
+  if head == 'get':
+    idByte = 0
+    off = int(sexpr[1])
+    return [idByte, off]
 
 def main(args):
   assert len(args) == 2, "Must have infile and outfile (in that order)"
