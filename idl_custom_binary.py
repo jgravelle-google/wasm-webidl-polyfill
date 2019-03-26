@@ -71,7 +71,15 @@ def parse_sexprs(text):
   return stack[0]
 
 WEBIDL_TYPES = {
-  'DOMString': 0,
+  'any': 0,
+  'DOMString': 1,
+}
+WASM_TYPES = {
+  "i32": 0x7f,
+  "i64": 0x7e,
+  "f32": 0x7d,
+  "f64": 0x7c,
+  "anyref": 0x6f,
 }
 
 def str_encode(text):
@@ -84,10 +92,17 @@ def parse_webidl(contents):
     return leb_u32(len(part)) + flatten(part)
   def outgoingBytes(sexpr):
     head = sexpr[0]
-    if head == 'utf8-cstr':
+    if head == 'as':
+      assert sexpr[1][0] == 'webidl-type'
+      assert sexpr[2][0] == 'idx'
+      idByte = 0
+      ty = WEBIDL_TYPES[sexpr[1][1]]
+      off = int(sexpr[2][1])
+      return [idByte, ty, off]
+    elif head == 'utf8-cstr':
       assert sexpr[1][0] == 'type'
       assert sexpr[2][0] == 'off-idx'
-      idByte = 0
+      idByte = 1
       ty = WEBIDL_TYPES[sexpr[1][1]]
       off = int(sexpr[2][1])
       return [idByte, ty, off]
@@ -99,9 +114,15 @@ def parse_webidl(contents):
       return [idByte, off]
   def incomingBytes(sexpr):
     head = sexpr[0]
-    if head == 'alloc-utf8-cstr':
-      assert sexpr[1][0] == 'alloc-export'
+    if head == 'as':
+      assert sexpr[1][0] == 'wasm-type'
       idByte = 0
+      ty = WASM_TYPES[sexpr[1][1]]
+      expr = inExpr(sexpr[2])
+      return [idByte, ty] + expr
+    elif head == 'alloc-utf8-cstr':
+      assert sexpr[1][0] == 'alloc-export'
+      idByte = 1
       name = sexpr[1][1][1:-1]
       expr = inExpr(sexpr[2])
       return [idByte] + str_encode(name) + expr

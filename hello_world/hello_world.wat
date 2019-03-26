@@ -3,8 +3,8 @@
   (func $console_log (param i32))
 )
 (import "host" "document_title"
-  ;; (int, int) document_title()
-  (func $document_title (result i32 i32))
+  ;; int document_title()
+  (func $document_title (result i32))
 )
 
 (import "env" "memory" (memory $0 256 256))
@@ -21,7 +21,7 @@
   ;; ptr = document_title()
   (call $document_title)
   (local.set $ptr)
-  (drop)
+  ;; (drop)
   ;; console_log(ptr)
   (call $console_log (local.get $ptr))
 )

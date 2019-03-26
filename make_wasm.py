@@ -16,6 +16,7 @@ def run(cmd):
 
 flags = [
   '--enable-multi-value',
+  '--enable-reference-types',
 ]
 run([wasm2wat, wat, '-o', code] + flags)
 run(['python', 'idl_custom_binary.py', wat, idl])

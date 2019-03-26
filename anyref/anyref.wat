@@ -3,42 +3,35 @@
 (data (i32.const 16) "Hello console\00")
 (data (i32.const 32) "Goodbye console\00")
 
-(import "host" "getConsole" (func $getConsole (result i32)))
-(import "host" "log" (func $log (param i32 i32)))
+(import "host" "getConsole" (func $getConsole (result anyref)))
+(import "host" "log" (func $log (param anyref i32)))
 
 (func $main (export "main")
-  (local $console i32)
+  (local $console anyref)
   (local.set $console (call $getConsole))
   (call $log
     (local.get $console)
     (i32.const 16)
   )
 
-  (if
-    ;; assert console == getConsole()
-    (i32.eq
-      (local.get $console)
-      (call $getConsole)
-    )
-    (call $log
-      (call $getConsole)
-      (i32.const 32)
-    )
-    (unreachable)
+  (call $log
+    (local.get $console)
+    (i32.const 32)
   )
 )
 
 (;webidl
-  (encode
-    (domString utf8_nullterm)
-    (anyref opaque_ptr_get)
+  (webidl-func-binding
+    import "host" "getConsole"
+    (result
+      (as (wasm-type anyref) (get 0))
+    )
   )
-  (decode
-    (domString utf8_outparam_buffer)
-    (anyref opaque_ptr_set)
-  )
-  (declarations
-    (import "host" "getConsole" (result anyref))
-    (import "host" "log" (param anyref domString))
+  (webidl-func-binding
+    import "host" "log"
+    (param
+      (as (webidl-type any) (idx 0))
+      (utf8-cstr (type DOMString) (off-idx 1))
+    )
   )
 webidl;)

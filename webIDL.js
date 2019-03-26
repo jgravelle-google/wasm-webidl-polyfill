@@ -26,7 +26,7 @@ function polyfill(module, imports, getExports) {
       u8[addr + i] = str.charCodeAt(i);
     }
     u8[addr + str.length] = 0;
-    return [addr, str.length];
+    return addr;
   }
   function utf8_ptr_len(ptr, len) {
     var result = ''
@@ -35,8 +35,11 @@ function polyfill(module, imports, getExports) {
     }
     return result;
   }
-  function native_wasm(x) {
+  function as_outgoing(x) {
     return x;
+  }
+  function as_incoming(args) {
+    return this.inExpr(args);
   }
   function opaque_ptr_set(ref) {
     var ptr = refs.length;
@@ -93,7 +96,14 @@ function polyfill(module, imports, getExports) {
 
     function readOutgoing() {
       var kind = readByte();
-      if (kind == 0) { // utf8-cstr
+      if (kind == 0) { // as
+        var ty = readByte();
+        var off = readByte();
+        return {
+          func: as_outgoing,
+          args: [off],
+        };
+      } else if (kind == 1) { // utf8-cstr
         var ty = readByte();
         var off = readByte();
         return {
@@ -114,7 +124,14 @@ function polyfill(module, imports, getExports) {
     }
     function readIncoming() {
       var kind = readByte();
-      if (kind == 0) { // alloc-utf8-cstr
+      if (kind == 0) { // as
+        var ty = readByte();
+        var inExpr = readInExpr();
+        return {
+          func: as_incoming,
+          inExpr,
+        }
+      } else if (kind == 1) { // alloc-utf8-cstr
         var name = readStr();
         var inExpr = readInExpr();
         return {
