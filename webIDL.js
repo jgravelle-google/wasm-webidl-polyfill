@@ -211,16 +211,29 @@ function polyfill(module, imports, getExports) {
 }
 
 
-function loadWasm(filename, imports) {
+async function loadWasm(filename, imports) {
   imports = imports || {};
   var bytes;
   if (typeof read === 'function') {
     bytes = read(filename, 'binary');
-  } else {
+  } else if (typeof require === 'function') {
     var fs = require('fs');
     bytes = fs.readFileSync(filename);
+  } else {
+    // For now, syncXHR
+    var request = new XMLHttpRequest();
+    request.open("GET", filename, true);
+    request.responseType = "arraybuffer";
+    request.onload = function () {
+      console.log('oh bytes')
+      bytes = request.response;
+    };
+    var fetched = await fetch(filename);
+    bytes = await fetched.arrayBuffer();
+    console.log('bytes?',bytes)
   }
 
+  console.log('bytes!', bytes)
   var module = new WebAssembly.Module(bytes);
   var instance;
   function getExports() {

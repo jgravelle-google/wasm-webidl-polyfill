@@ -2,7 +2,7 @@ import subprocess
 import sys
 import os
 
-wasm2wat = '/s/wbin/wat2wasm'
+wat2wasm = '/s/wbin/wat2wasm'
 
 wat = sys.argv[1]
 base = os.path.splitext(wat)[0]
@@ -18,7 +18,7 @@ flags = [
   '--enable-multi-value',
   '--enable-reference-types',
 ]
-run([wasm2wat, wat, '-o', code] + flags)
+run([wat2wasm, wat, '-o', code] + flags)
 run(['python', 'idl_custom_binary.py', wat, idl])
 result = run(['cat', code, idl])
 with open(wasm, 'w') as f:

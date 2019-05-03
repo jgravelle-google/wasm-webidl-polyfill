@@ -1,9 +1,9 @@
 FILES=\
-hello_world/hello_world.wasm \
-to_upper/to_upper.wasm \
 anyref/anyref.wasm \
-sharing/lib.wasm \
-sharing/main.wasm \
+hello_world/hello_world.wasm \
+sharing/lib.wasm sharing/main.wasm \
+to_upper/to_upper.wasm \
+webgl/webgl.wasm \
 
 all: $(FILES)
 .PHONY: all
