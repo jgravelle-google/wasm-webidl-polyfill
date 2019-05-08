@@ -36,22 +36,21 @@
   )
 )
 
-(;webidl
-  (webidl-type $any any)
-  (webidl-type $string DOMString)
-  (webidl-func-binding
-    import "document" "getElementById"
-    (param
-      (utf8-cstr (type $string) (off-idx 0))
-    )
-    (result (as (wasm-type anyref) (get 0)))
+;; WebIDL
+(@webidl type $any any)
+(@webidl type $string DOMString)
+(@webidl func-binding
+  import "document" "getElementById"
+  (param
+    (utf8-cstr (type $string) (off-idx 0))
   )
-  (webidl-func-binding
-    import "host" "getContext"
-    (param
-      (as (webidl-type $any) (idx 0))
-      (utf8-cstr (type $string) (off-idx 1))
-    )
-    (result (as (wasm-type anyref) (get 0)))
+  (result (as (wasm-type anyref) (get 0)))
+)
+(@webidl func-binding
+  import "host" "getContext"
+  (param
+    (as (webidl-type $any) (idx 0))
+    (utf8-cstr (type $string) (off-idx 1))
   )
-webidl;)
+  (result (as (wasm-type anyref) (get 0)))
+)

@@ -30,18 +30,17 @@
   (i32.const 1024)
 )
 
-(;webidl
-  (webidl-type $string DOMString)
-  (webidl-func-binding
-    import "host" "console_log"
-    (param
-      (utf8-cstr (type $string) (off-idx 0))
-    )
+;; WebIDL
+(@webidl type $string DOMString)
+(@webidl func-binding
+  import "host" "console_log"
+  (param
+    (utf8-cstr (type $string) (off-idx 0))
   )
-  (webidl-func-binding
-    import "host" "document_title"
-    (result
-      (alloc-utf8-cstr (alloc-export "alloc") (get 0))
-    )
+)
+(@webidl func-binding
+  import "host" "document_title"
+  (result
+    (alloc-utf8-cstr (alloc-export "alloc") (get 0))
   )
-webidl;)
+)

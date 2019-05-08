@@ -70,18 +70,35 @@
   )
 ;)
 
-(;webidl
-  (encode
-    (domString utf8_nullterm)
-    (int nativeWasm)
+;; WebIDL
+(@webidl type $int int)
+(@webidl type $string DOMString)
+;; (encode
+;;   (domString utf8_nullterm)
+;;   (int nativeWasm)
+;; )
+;; (decode
+;;   (domString utf8_outparam_buffer)
+;;   (int nativeWasm)
+;; )
+(@webidl func-binding
+  import "host" "console_log"
+  (param
+    (as (webidl-type $string) (idx 0))
   )
-  (decode
-    (domString utf8_outparam_buffer)
-    (int nativeWasm)
+)
+(@webidl func-binding
+  import "host" "document_title"
+  (result
+    (as (wasm-type anyref) (get 0))
   )
-  (declarations
-    (import "host" "console_log" (param domString))
-    (import "host" "document_title" (result domString))
-    (import "host" "to_upper" (param int) (result int))
+)
+(@webidl func-binding
+  import "host" "to_upper"
+  (param
+    (as (webidl-type $int) (idx 0))
   )
-webidl;)
+  (result
+    (as (wasm-type i32) (get 0))
+  )
+)

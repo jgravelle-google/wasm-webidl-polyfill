@@ -21,18 +21,25 @@
   )
 )
 
-(;webidl
-  (encode
-    (domString utf8_nullterm)
-    (anyref opaque_ptr_get)
+;; WebIDL
+(@webidl type $any any)
+(@webidl type $string DOMString)
+(@webidl func-binding
+  import "host" "getConsole"
+  (result
+    (as (wasm-type anyref) (get 0))
   )
-  (decode
-    (domString utf8_constaddr_1024)
-    (anyref opaque_ptr_set)
+)
+(@webidl func-binding
+  import "host" "log"
+  (param
+    (as (webidl-type $any) (idx 0))
+    (utf8-cstr (type $string) (off-idx 1))
   )
-  (declarations
-    (import "host" "getConsole" (result anyref))
-    (import "host" "log" (param anyref domString))
-    (export "cLog" (param domString))
+)
+(@webidl func-binding
+  export "cLog"
+  (param
+    domString ;; utf8_constaddr_1024
   )
-webidl;)
+)

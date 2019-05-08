@@ -20,20 +20,19 @@
   )
 )
 
-(;webidl
-  (webidl-type $any any)
-  (webidl-type $string DOMString)
-  (webidl-func-binding
-    import "host" "getConsole"
-    (result
-      (as (wasm-type anyref) (get 0))
-    )
+;; WebIDL
+(@webidl type $any any)
+(@webidl type $string DOMString)
+(@webidl func-binding
+  import "host" "getConsole"
+  (result
+    (as (wasm-type anyref) (get 0))
   )
-  (webidl-func-binding
-    import "host" "log"
-    (param
-      (as (webidl-type $any) (idx 0))
-      (utf8-cstr (type $string) (off-idx 1))
-    )
+)
+(@webidl func-binding
+  import "host" "log"
+  (param
+    (as (webidl-type $any) (idx 0))
+    (utf8-cstr (type $string) (off-idx 1))
   )
-webidl;)
+)

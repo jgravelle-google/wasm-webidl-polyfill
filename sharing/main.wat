@@ -12,14 +12,11 @@
   )
 )
 
-(;webidl
-  (encode
-    (domString utf8_ptr_len)
+;; WebIDL
+(@webidl type $string DOMString)
+(@webidl func-binding
+  import "lib" "cLog"
+  (param
+    (utf8-cstr (type $string) (off-idx 0))
   )
-  (decode
-    (domString utf8_constaddr_1024)
-  )
-  (declarations
-    (import "lib" "cLog" (param domString))
-  )
-webidl;)
+)

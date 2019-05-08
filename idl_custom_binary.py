@@ -7,6 +7,7 @@ import sys
 WEBIDL_TYPES = {
   'any': 0,
   'DOMString': 1,
+  'int': 2,
 }
 WASM_TYPES = {
   "i32": 0x7f,
@@ -86,34 +87,35 @@ def str_encode(text):
   return leb_u32(len(text)) + [ord(c) for c in text]
 
 def parse_webidl(contents):
-  idl_section = contents.split('(;webidl')[1].split('webidl;)')[0].strip()
+  # using ';; WebIDL' as a sentinel to avoid naively sexpr parsing all the .wat
+  idl_section = contents.split(';; WebIDL')[1].strip()
   sexprs = parse_sexprs(idl_section)
 
   # parse types
   type_map = {}
   type_bytes = []
   for elem in sexprs:
-    if elem[0] != 'webidl-type':
+    if elem[0] != '@webidl' or elem[1] != 'type':
       continue
-    name = elem[1]
+    name = elem[2]
     assert name[0] == '$'
     print 'found a name:', name
     index = len(type_map)
     type_map[name] = len(type_map)
-    type_bytes.append([WEBIDL_TYPES[elem[2]]])
+    type_bytes.append([WEBIDL_TYPES[elem[3]]])
 
   # parse func bindings
   data = []
   for elem in sexprs:
-    if elem[0] != 'webidl-func-binding':
+    if elem[0] != '@webidl' or elem[1] != 'func-binding':
       continue
-    if elem[1] == 'import':
-      namespace = elem[2][1:-1]
-      name = elem[3][1:-1]
+    if elem[2] == 'import':
+      namespace = elem[3][1:-1]
+      name = elem[4][1:-1]
 
       params = []
       results = []
-      for x in elem[4:]:
+      for x in elem[5:]:
         if x[0] == "param":
           for param in x[1:]:
             params.append(outgoingBytes(param, type_map))
@@ -129,7 +131,7 @@ def parse_webidl(contents):
         segment(results)
       )
     else:
-      assert elem[1] == "export"
+      assert elem[2] == "export"
 
   return segment(type_bytes) + segment(data)
 

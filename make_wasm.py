@@ -15,6 +15,7 @@ def run(cmd):
   return subprocess.check_output(cmd)
 
 flags = [
+  '--enable-annotations',
   '--enable-multi-value',
   '--enable-reference-types',
 ]
