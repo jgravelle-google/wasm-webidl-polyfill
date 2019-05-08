@@ -1,7 +1,7 @@
 (import "env" "memory" (memory $0 256 256))
 (data (i32.const 16) "a-canvas\00") ;; canvas ID
 (data (i32.const 32) "2d\00")       ;; 2D context
-(data (i32.const 48) "0xff2020\00") ;; red color
+(data (i32.const 48) "#ff2020\00")  ;; red color
 
 (import "document" "getElementById"
   (func $document_getElementById (param i32) (result anyref))
@@ -11,6 +11,9 @@
 )
 (import "host" "fillRect"
   (func $fillRect (param anyref f32 f32 f32 f32))
+)
+(import "host" "setFillStyle"
+  (func $setFillStyle (param anyref i32))
 )
 
 (func $main (export "main")
@@ -34,6 +37,18 @@
     (f32.const 200)
     (f32.const 200)
   )
+
+  (call $setFillStyle
+    (local.get $context)
+    (i32.const 48)
+  )
+  (call $fillRect
+    (local.get $context)
+    (f32.const 175)
+    (f32.const 175)
+    (f32.const 200)
+    (f32.const 200)
+  )
 )
 
 ;; WebIDL
@@ -53,4 +68,11 @@
     (utf8-cstr (type $string) (off-idx 1))
   )
   (result (as (wasm-type anyref) (get 0)))
+)
+(@webidl func-binding
+  import "host" "setFillStyle"
+  (param
+    (as (webidl-type $any) (idx 0))
+    (utf8-cstr (type $string) (off-idx 1))
+  )
 )

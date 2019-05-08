@@ -14,6 +14,7 @@ var moduleImports = {
   host: {
     getContext: (obj, str) => obj.getContext(str),
     fillRect: (obj, x, y, w, h) => obj.fillRect(x, y, w, h),
+    setFillStyle: (obj, str) => obj.fillStyle = str,
   },
 };
 
