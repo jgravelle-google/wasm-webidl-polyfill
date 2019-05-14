@@ -39,24 +39,14 @@ def binary_u32(value):
   return binary
 
 def custom_section_binary(section_name, data):
-  binary_size = (
-    len(data) +
-    len(section_name) +
-    1
-  )
-
-  # iterate until size_leb reaches a fixed point (should be very fast)
+  encoded_name = str_encode(section_name)
+  binary_size = len(data) + len(encoded_name)
   size_leb = leb_u32(binary_size)
-  last_size = 1
-  while len(size_leb) != last_size:
-    binary_size += len(size_leb) - last_size
-    last_size = len(size_leb)
-    size_leb = leb_u32(binary_size)
 
   return (
     [0] + # custom section
     size_leb + # payload_len
-    str_encode(section_name) +
+    encoded_name +
     data
   )
 
@@ -99,7 +89,6 @@ def parse_webidl(contents):
       continue
     name = elem[2]
     assert name[0] == '$'
-    print 'found a name:', name
     index = len(type_map)
     type_map[name] = len(type_map)
     type_bytes.append([WEBIDL_TYPES[elem[3]]])
