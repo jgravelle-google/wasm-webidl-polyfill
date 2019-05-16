@@ -16,6 +16,7 @@
 (@webidl type $string DOMString)
 (@webidl func-binding
   import "lib" "cLog"
+  static
   (param
     (utf8-cstr (type $string) (off-idx 0))
   )

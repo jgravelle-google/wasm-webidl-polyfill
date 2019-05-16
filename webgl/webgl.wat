@@ -53,9 +53,11 @@
 
 ;; WebIDL
 (@webidl type $any any)
+(@webidl type $float float)
 (@webidl type $string DOMString)
 (@webidl func-binding
   import "document" "getElementById"
+  static
   (param
     (utf8-cstr (type $string) (off-idx 0))
   )
@@ -63,6 +65,7 @@
 )
 (@webidl func-binding
   import "host" "getContext"
+  method
   (param
     (as (webidl-type $any) (idx 0))
     (utf8-cstr (type $string) (off-idx 1))
@@ -71,8 +74,20 @@
 )
 (@webidl func-binding
   import "host" "setFillStyle"
+  static
   (param
     (as (webidl-type $any) (idx 0))
     (utf8-cstr (type $string) (off-idx 1))
+  )
+)
+(@webidl func-binding
+  import "host" "fillRect"
+  method
+  (param
+    (as (webidl-type $any) (idx 0))
+    (as (webidl-type $float) (idx 1))
+    (as (webidl-type $float) (idx 2))
+    (as (webidl-type $float) (idx 3))
+    (as (webidl-type $float) (idx 4))
   )
 )

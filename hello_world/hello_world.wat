@@ -21,7 +21,6 @@
   ;; ptr = document_title()
   (call $document_title)
   (local.set $ptr)
-  ;; (drop)
   ;; console_log(ptr)
   (call $console_log (local.get $ptr))
 )
@@ -34,12 +33,14 @@
 (@webidl type $string DOMString)
 (@webidl func-binding
   import "host" "console_log"
+  static
   (param
     (utf8-cstr (type $string) (off-idx 0))
   )
 )
 (@webidl func-binding
   import "host" "document_title"
+  static
   (result
     (alloc-utf8-cstr (alloc-export "alloc") (get 0))
   )

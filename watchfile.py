@@ -1,5 +1,8 @@
 #!/usr/bin/python
 
+# Helper script to auto-run a command when files are modified.
+# E.g.: `python watchfile.py webIDL.js */*.wat -- make`
+
 import os
 import subprocess
 import sys

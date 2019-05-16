@@ -12,8 +12,8 @@ var moduleImports = {
     getElementById: (id) => document.getElementById(id),
   },
   host: {
-    getContext: (obj, str) => obj.getContext(str),
-    fillRect: (obj, x, y, w, h) => obj.fillRect(x, y, w, h),
+    getContext: HTMLCanvasElement.prototype.getContext,
+    fillRect: CanvasRenderingContext2D.prototype.fillRect,
     setFillStyle: (obj, str) => obj.fillStyle = str,
   },
 };

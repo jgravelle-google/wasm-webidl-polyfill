@@ -20,7 +20,7 @@ flags = [
   '--enable-reference-types',
 ]
 run([wat2wasm, wat, '-o', code] + flags)
-run(['python', 'idl_custom_binary.py', wat, idl])
+print run(['python', 'idl_custom_binary.py', wat, idl])
 result = run(['cat', code, idl])
 with open(wasm, 'w') as f:
   f.write(result)

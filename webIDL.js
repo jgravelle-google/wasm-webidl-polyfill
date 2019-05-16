@@ -142,7 +142,7 @@ function polyfill(module, imports, getExports) {
       }
     }
 
-    function bindImport(f, params, results) {
+    function bindImport(f, importKind, params, results) {
       return function() {
         var args = [];
         for (var i = 0; i < params.length; ++i) {
@@ -153,7 +153,14 @@ function polyfill(module, imports, getExports) {
           }
           args.push(param.func.apply(null, incArgs));
         }
-        var retVal = f.apply(null, args);
+        var retVal;
+        if (importKind === 0) {
+          // static
+          retVal = f.apply(null, args);
+        } else if (importKind === 1) {
+          // method
+          retVal = f.apply(args[0], args.slice(1));
+        }
         if (results.length > 0) {
           var result = results[0]; // todo: multi-return?
           retVal = result.func.apply(result, [[retVal]]);
@@ -164,7 +171,8 @@ function polyfill(module, imports, getExports) {
     function makeExporter(param, result) {
       return function(f) {
         // maybe this works? TODO, find out
-        return bindImport(f, param, result);
+        importKind = 0;
+        return bindImport(f, importKind, param, result);
       }
     }
 
@@ -181,9 +189,11 @@ function polyfill(module, imports, getExports) {
       if (kind == 0) {
         var namespace = readStr();
         var name = readStr();
+        var importKind = readByte();
         var params = readList(readOutgoing);
         var results = readList(readIncoming);
-        imports[namespace][name] = bindImport(imports[namespace][name], params, results);
+        imports[namespace][name] = bindImport(
+          imports[namespace][name], importKind, params, results);
       } else if (kind == 1) {
         var name = readStr();
         var params = readList(readIncoming);
@@ -220,20 +230,10 @@ async function loadWasm(filename, imports) {
     var fs = require('fs');
     bytes = fs.readFileSync(filename);
   } else {
-    // For now, syncXHR
-    var request = new XMLHttpRequest();
-    request.open("GET", filename, true);
-    request.responseType = "arraybuffer";
-    request.onload = function () {
-      console.log('oh bytes')
-      bytes = request.response;
-    };
     var fetched = await fetch(filename);
     bytes = await fetched.arrayBuffer();
-    console.log('bytes?',bytes)
   }
 
-  console.log('bytes!', bytes)
   var module = new WebAssembly.Module(bytes);
   var instance;
   function getExports() {

@@ -83,18 +83,21 @@
 ;; )
 (@webidl func-binding
   import "host" "console_log"
+  static
   (param
     (as (webidl-type $string) (idx 0))
   )
 )
 (@webidl func-binding
   import "host" "document_title"
+  static
   (result
     (as (wasm-type anyref) (get 0))
   )
 )
 (@webidl func-binding
   import "host" "to_upper"
+  static
   (param
     (as (webidl-type $int) (idx 0))
   )

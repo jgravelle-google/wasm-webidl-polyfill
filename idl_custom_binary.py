@@ -8,6 +8,7 @@ WEBIDL_TYPES = {
   'any': 0,
   'DOMString': 1,
   'int': 2,
+  'float': 3,
 }
 WASM_TYPES = {
   "i32": 0x7f,
@@ -104,7 +105,14 @@ def parse_webidl(contents):
 
       params = []
       results = []
-      for x in elem[5:]:
+      kind_str = elem[5]
+      if kind_str == 'static':
+        import_kind = [0]
+      elif kind_str == 'method':
+        import_kind = [1]
+      else:
+        assert False, 'unexpected kind: ' + str(kind_str)
+      for x in elem[6:]:
         if x[0] == "param":
           for param in x[1:]:
             params.append(outgoingBytes(param, type_map))
@@ -116,6 +124,7 @@ def parse_webidl(contents):
       data.append([import_byte] +
         str_encode(namespace) +
         str_encode(name) +
+        import_kind +
         segment(params) +
         segment(results)
       )

@@ -25,12 +25,14 @@
 (@webidl type $string DOMString)
 (@webidl func-binding
   import "host" "getConsole"
+  static
   (result
     (as (wasm-type anyref) (get 0))
   )
 )
 (@webidl func-binding
   import "host" "log"
+  static
   (param
     (as (webidl-type $any) (idx 0))
     (utf8-cstr (type $string) (off-idx 1))
