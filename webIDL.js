@@ -1,9 +1,30 @@
+var debugEnabled = false;
+var debugIndentLevel = 0;
+function debug() {
+  if (debugEnabled) {
+    console.log.apply(this, ['DEBUG:', '  '.repeat(debugIndentLevel), ...arguments]);
+  }
+}
+function debugIndent() {
+  debugIndentLevel += 1;
+}
+function debugDedent() {
+  debugIndentLevel -= 1;
+}
+
 function polyfill(module, imports, getExports) {
-  var memory = imports['env']['memory'];
   var refMap = {};
   var refs = [];
-  var u8 = memory && new Uint8Array(memory.buffer);
+  var u8;
+  function initMemory() {
+    if (u8) return;
+    debug('initializing memory');
+    var memory = imports['env']['memory'] || getExports()['memory'];
+    u8 = new Uint8Array(memory.buffer);
+  }
   function utf8_cstr(ptr) {
+    debug('in utf8_cstr:', ptr);
+    initMemory();
     var result = '';
     var i = ptr;
     while (u8[i] != 0) {
@@ -13,6 +34,7 @@ function polyfill(module, imports, getExports) {
     return result;
   }
   function utf8_outparam_buffer(str, ptr, bufferLength) {
+    initMemory();
     var len = Math.min(str.length, bufferLength);
     for (var i = 0; i < len; ++i) {
       u8[ptr + i] = str.charCodeAt(i);
@@ -20,6 +42,8 @@ function polyfill(module, imports, getExports) {
     return len;
   }
   function alloc_utf8_cstr(args) {
+    debug('in alloc_utf8_cstr:', args);
+    initMemory();
     var str = this.inExpr(args);
     var addr = getExports()[this.name](str.length + 1);
     for (var i = 0; i < str.length; ++i) {
@@ -29,6 +53,7 @@ function polyfill(module, imports, getExports) {
     return addr;
   }
   function utf8_ptr_len(ptr, len) {
+    initMemory();
     var result = ''
     for (var i = 0; i < len; ++i) {
       result += String.fromCharCode(u8[ptr + i]);
@@ -89,7 +114,9 @@ function polyfill(module, imports, getExports) {
       var len = readByte();
       var result = [];
       for (var i = 0; i < len; ++i) {
+        debug(i); debugIndent();
         result.push(f());
+        debugDedent();
       }
       return result;
     }
@@ -97,6 +124,7 @@ function polyfill(module, imports, getExports) {
     function readOutgoing() {
       var kind = readByte();
       if (kind == 0) { // as
+        debug('as');
         var ty = readByte();
         var off = readByte();
         return {
@@ -104,6 +132,7 @@ function polyfill(module, imports, getExports) {
           args: [off],
         };
       } else if (kind == 1) { // utf8-cstr
+        debug('utf8-cstr');
         var ty = readByte();
         var off = readByte();
         return {
@@ -125,6 +154,7 @@ function polyfill(module, imports, getExports) {
     function readIncoming() {
       var kind = readByte();
       if (kind == 0) { // as
+        debug('as');
         var ty = readByte();
         var inExpr = readInExpr();
         return {
@@ -132,6 +162,7 @@ function polyfill(module, imports, getExports) {
           inExpr,
         }
       } else if (kind == 1) { // alloc-utf8-cstr
+        debug('alloc-utf8-cstr');
         var name = readStr();
         var inExpr = readInExpr();
         return {
@@ -189,9 +220,13 @@ function polyfill(module, imports, getExports) {
       if (kind == 0) {
         var namespace = readStr();
         var name = readStr();
+        debug('Binding:', name); debugIndent();
         var importKind = readByte();
+        debug('outgoing'); debugIndent();
         var params = readList(readOutgoing);
+        debugDedent(); debug('incoming'); debugIndent();
         var results = readList(readIncoming);
+        debugDedent(); debugDedent();
         imports[namespace][name] = bindImport(
           imports[namespace][name], importKind, params, results);
       } else if (kind == 1) {
