@@ -2,4 +2,6 @@
 *.wasm_code
 *.wasm
 */webIDL.js
-*_base.wat
+*.wat
+!*_base.wat
+!*_bind.wat

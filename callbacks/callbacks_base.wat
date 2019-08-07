@@ -47,15 +47,3 @@
   (elem (;0;) (i32.const 1) $logNumber_int_)
   (data (;0;) (i32.const 1024) "\00\00\00\00")
   (data (;1;) (i32.const 1028) "in logNumber, x =\00in logNumber, lastSeen =\00struct: Over ten\00struct: underten\00after callback, lastSeen =\00"))
-
-;; WebIDL
-(@webidl type $int int)
-(@webidl type $string DOMString)
-(@webidl func-binding
-  import "env" "console_log"
-  static
-  (param
-    (utf8-cstr (type $string) (off-idx 0))
-    (as (webidl-type $int) (idx 1))
-  )
-)

@@ -18,5 +18,8 @@ callbacks/callbacks_base.wat: callbacks/callbacks.cpp
 		-nostdlib -Wl,--no-entry,--allow-undefined,--export-table -O1
 	wasm2wat callbacks/callbacks_base.wasm -f -o callbacks/callbacks_base.wat
 
-%.wasm: %.wat webIDL.js
-	python make_wasm.py $^
+%.wat: %_base.wat %_bind.wat
+	cat $^ > $@
+
+%.wasm: %.wat webIDL.js make_wasm.py idl_custom_binary.py
+	python make_wasm.py $<
