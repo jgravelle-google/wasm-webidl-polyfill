@@ -37,3 +37,9 @@ __attribute__((used))
 intCallback getCallback() {
   return &logNumber;
 }
+
+__attribute__((used))
+void callImportedCallback(intCallback f) {
+  f(3);
+  f(5);
+}

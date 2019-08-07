@@ -2,13 +2,13 @@ var webIDL;
 const isD8 = typeof testRunner != 'undefined';
 if (isD8) {
   load('webIDL.js');
-  webIDL = {loadWasm};
+  webIDL = { loadWasm, jsToWasmFunc };
 } else {
   webIDL = require('./webIDL.js');
 }
 
 var wasm;
-var moduleImports = {
+const moduleImports = {
   env: {
     console_log: (ptr, arg) => console.log(ptr, arg),
     callCallback: (ptr) => {
@@ -25,5 +25,13 @@ async function loadFile() {
   let idx = wasm.exports._Z11getCallbackv();
   let table = wasm.exports['__indirect_function_table'];
   table.get(idx)(6);
+
+  let jsIdx = table.length;
+  table.grow(1);
+  table.set(jsIdx, webIDL.jsToWasmFunc(function (x) {
+    console.log('in added js function: ', jsIdx);
+    console.log('  x =', x);
+  }, 'vi'));
+  wasm.exports._Z20callImportedCallbackPFviE(jsIdx);
 }
 loadFile();
