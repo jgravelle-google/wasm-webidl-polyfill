@@ -22,5 +22,8 @@ var moduleImports = {
 async function loadFile() {
   wasm = await webIDL.loadWasm('callbacks/callbacks.wasm', moduleImports);
   wasm.exports._Z11doSomethingv();
+  let idx = wasm.exports._Z11getCallbackv();
+  let table = wasm.exports['__indirect_function_table'];
+  table.get(idx)(6);
 }
 loadFile();

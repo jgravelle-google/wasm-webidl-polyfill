@@ -1,4 +1,4 @@
-typedef void (intCallback)(int);
+typedef void (*intCallback)(int);
 
 extern "C" {
   void callCallback(intCallback);
@@ -20,7 +20,7 @@ void logNumber(int x) {
 __attribute__((used))
 VisibleStruct doSomething() {
   VisibleStruct obj;
-  console_log("in logNumber, lastSeen =", lastSeen);
+  console_log("in doSomething, lastSeen =", lastSeen);
   callCallback(logNumber);
   obj.intField = lastSeen;
   if (lastSeen > 10) {
@@ -28,7 +28,12 @@ VisibleStruct doSomething() {
   } else {
     obj.strField = "struct: underten";
   }
-  console_log("after callback, lastSeen =", lastSeen);
+  console_log("after doSomething callback, lastSeen =", lastSeen);
   console_log(obj.strField, obj.intField);
   return obj;
+}
+
+__attribute__((used))
+intCallback getCallback() {
+  return &logNumber;
 }
