@@ -33,7 +33,7 @@ def leb_u32(value):
 
 def binary_u32(value):
   binary = []
-  for i in xrange(4):
+  for i in range(4):
     byte = value & 0xff
     value >>= 8
     binary.append(byte)
@@ -58,7 +58,7 @@ def parse_sexprs(text):
     if cur != '':
       stack[-1].append(cur)
     return ''
-  for i in xrange(len(text)):
+  for i in range(len(text)):
     c = text[i]
     if c == '(':
       cur = sep()
@@ -184,8 +184,7 @@ def main(args):
   data = parse_webidl(contents)
   binary = custom_section_binary('webIDLBindings', data)
   with open(outfile, 'wb') as f:
-    for byte in binary:
-      f.write(chr(byte))
+    f.write(bytearray(binary))
   return 0
 
 if __name__ == '__main__':

@@ -2,7 +2,7 @@ import subprocess
 import sys
 import os
 
-wat2wasm = '/s/wbin/wat2wasm'
+wat2wasm = 'wat2wasm'
 
 wat = sys.argv[1]
 base = os.path.splitext(wat)[0]
@@ -20,8 +20,8 @@ flags = [
   '--enable-reference-types',
 ]
 run([wat2wasm, wat, '-o', code] + flags)
-print run(['python', 'idl_custom_binary.py', wat, idl])
+print(run(['python', 'idl_custom_binary.py', wat, idl]))
 result = run(['cat', code, idl])
-with open(wasm, 'w') as f:
+with open(wasm, 'wb') as f:
   f.write(result)
 run(['cp', 'webIDL.js', dirname])
