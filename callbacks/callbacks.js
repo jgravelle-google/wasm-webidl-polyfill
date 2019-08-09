@@ -22,16 +22,18 @@ const moduleImports = {
 async function loadFile() {
   wasm = await webIDL.loadWasm('callbacks/callbacks.wasm', moduleImports);
   wasm.exports._Z11doSomethingv();
-  let idx = wasm.exports._Z11getCallbackv();
-  let table = wasm.exports['__indirect_function_table'];
-  table.get(idx)(6);
+  wasm.exports._Z11getCallbackv()(6);
 
-  let jsIdx = table.length;
-  table.grow(1);
-  table.set(jsIdx, webIDL.jsToWasmFunc(function (x) {
-    console.log('in added js function: ', jsIdx);
-    console.log('  x =', x);
-  }, 'vi'));
-  wasm.exports._Z20callImportedCallbackPFviE(jsIdx);
+  // let idx = wasm.exports._Z11getCallbackv();
+  // let table = wasm.exports['__indirect_function_table'];
+  // table.get(idx)(6);
+
+  // let jsIdx = table.length;
+  // table.grow(1);
+  // table.set(jsIdx, webIDL.jsToWasmFunc((x) => {
+  //   console.log('in added js function: ', jsIdx);
+  //   console.log('  x =', x);
+  // }, 'vi'));
+  // wasm.exports._Z20callImportedCallbackPFviE(jsIdx);
 }
 loadFile();

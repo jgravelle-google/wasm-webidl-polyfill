@@ -1,7 +1,7 @@
 ;; WebIDL
 (@webidl type $int int)
 (@webidl type $string DOMString)
-(@webidl type $intCallback int)
+(@webidl type $intCallback TempCallback)
 
 (@webidl func-binding
   import "env" "console_log"
@@ -14,22 +14,26 @@
 
 (@webidl func-binding
   export "_Z11doSomethingv"
-  static
-  (param
-    (as (wasm-type i32) (get 0))
+  (result
+    (as (webidl-type $int) (idx 0))
   )
 )
 (@webidl func-binding
   export "_Z11getCallbackv"
-  static
   (result
-    (as (webidl-type $intCallback) (idx 0))
+    (lift-func-idx
+      (type $intCallback)
+      (table "__indirect_function_table")
+      (idx 0)
+    )
   )
 )
 (@webidl func-binding
   export "_Z20callImportedCallbackPFviE"
-  static
   (param
-    (as (webidl-type $intCallback) (idx 0))
+    (lower-func-idx
+      (table "__indirect_function_table")
+      (get 0)
+    )
   )
 )

@@ -60,11 +60,24 @@ function polyfill(module, imports, getExports) {
     }
     return result;
   }
+
+  // Lifting
   function as_outgoing(x) {
     return x;
   }
+  function lift_func_idx(tableName, idx) {
+    debug('lift_func_idx:', tableName, idx);
+    return getExports()[tableName].get(idx);
+  }
+
+  // Lowering
   function as_incoming(args) {
     return this.inExpr(args);
+  }
+  function lower_func_idx() {
+    console.log(this);
+    console.log(arguments);
+    throw 'Unimplemented: lower_func_idx'
   }
 
   var exportFixups = {};
@@ -121,6 +134,21 @@ function polyfill(module, imports, getExports) {
           func: utf8_cstr,
           args: [off],
         };
+      } else if (kind == 2) { // lift-func-idx
+        debug('lift-func-idx'); debugIndent();
+        var ty = readByte();
+        debug('ty =', ty);
+        var tableName = readStr();
+        debug('tableName =', tableName);
+        var off = readByte();
+        debug('off =', off);
+        debugDedent();
+        return {
+          func: lift_func_idx,
+          args: [tableName, off],
+        };
+      } else {
+        throw 'Unknown lifting binding: ' + kind
       }
     }
 
@@ -157,6 +185,19 @@ function polyfill(module, imports, getExports) {
           name,
           inExpr,
         }
+      } else if (kind == 2) { // lower-func-idx
+        debug('lower-func-idx'); debugIndent();
+        var tableName = readStr();
+        debug('tableName =', tableName);
+        var inExpr = readInExpr();
+        debugDedent();
+        return {
+          func: lower_func_idx,
+          tableName,
+          inExpr,
+        };
+      } else {
+        throw 'Unknown lowering binding: ' + kind
       }
     }
 

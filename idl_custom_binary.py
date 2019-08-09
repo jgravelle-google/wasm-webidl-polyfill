@@ -9,6 +9,7 @@ WEBIDL_TYPES = {
   'DOMString': 1,
   'int': 2,
   'float': 3,
+  'TempCallback': 64,
 }
 WASM_TYPES = {
   "i32": 0x7f,
@@ -130,6 +131,24 @@ def parse_webidl(contents):
       )
     else:
       assert elem[2] == "export"
+      name = elem[3][1:-1]
+
+      params = []
+      results = []
+      for x in elem[4:]:
+        if x[0] == "param":
+          for param in x[1:]:
+            params.append(incomingBytes(param))
+        else:
+          assert x[0] == "result"
+          for result in x[1:]:
+            results.append(outgoingBytes(result, type_map))
+      export_byte = 1
+      data.append([export_byte] +
+        str_encode(name) +
+        segment(params) +
+        segment(results)
+      )
 
   return segment(type_bytes) + segment(data)
 
@@ -154,6 +173,16 @@ def outgoingBytes(sexpr, type_map):
     ty = type_map[sexpr[1][1]]
     off = int(sexpr[2][1])
     return [idByte, ty, off]
+  elif head == 'lift-func-idx':
+    assert sexpr[1][0] == 'type'
+    assert sexpr[2][0] == 'table'
+    assert sexpr[3][0] == 'idx'
+    idByte = 2
+    ty = type_map[sexpr[1][1]]
+    tableName = sexpr[2][1][1:-1]
+    off = int(sexpr[3][1])
+    return [idByte, ty] + str_encode(tableName) + [off]
+  assert False, 'Unknown outgoing: ' + str(sexpr)
 
 def incomingBytes(sexpr):
   head = sexpr[0]
@@ -169,12 +198,20 @@ def incomingBytes(sexpr):
     name = sexpr[1][1][1:-1]
     expr = inExpr(sexpr[2])
     return [idByte] + str_encode(name) + expr
+  elif head == 'lower-func-idx':
+    assert sexpr[1][0] == 'table'
+    idByte = 2
+    tableName = sexpr[1][1][1:-1]
+    expr = inExpr(sexpr[2])
+    return [idByte] + str_encode(tableName) + expr
+  assert False, 'Unknown incoming: ' + str(sexpr)
 def inExpr(sexpr):
   head = sexpr[0]
   if head == 'get':
     idByte = 0
     off = int(sexpr[1])
     return [idByte, off]
+  assert False, 'Unknown inExpr: ' + str(sexpr)
 
 def main(args):
   assert len(args) == 2, "Must have infile and outfile (in that order)"
