@@ -2,7 +2,7 @@ var debugEnabled = false;
 var debugIndentLevel = 0;
 function debug() {
   if (debugEnabled) {
-    console.log.apply(this, ['DEBUG:', '  '.repeat(debugIndentLevel), ...arguments]);
+    console.log.apply(this, ['[|DEBUG|]:', '  '.repeat(debugIndentLevel), ...arguments]);
   }
 }
 function debugIndent() {
@@ -66,28 +66,7 @@ function polyfill(module, imports, getExports) {
   function as_incoming(args) {
     return this.inExpr(args);
   }
-  function opaque_ptr_set(ref) {
-    var ptr = refs.length;
-    if (ref in refMap) {
-      ptr = refMap[ref];
-    } else {
-      refs.push(ref);
-      refMap[ref] = ptr;
-    }
-    return ptr;
-  }
-  function opaque_ptr_get(ptr) {
-    return refs[ptr];
-  }
 
-  var webidlTypes = {
-    0: 'DOMString',
-  }
-  var outgoingBindingTypes = {
-    0: [utf8_cstr],
-  };
-  var encoders = {};
-  var decoders = {};
   var exportFixups = {};
 
   var bindingSections = WebAssembly.Module.customSections(module, 'webIDLBindings');
@@ -124,9 +103,12 @@ function polyfill(module, imports, getExports) {
     function readOutgoing() {
       var kind = readByte();
       if (kind == 0) { // as
-        debug('as');
+        debug('lifting-as'); debugIndent();
         var ty = readByte();
+        debug('ty =', ty);
         var off = readByte();
+        debug('off =', off);
+        debugDedent();
         return {
           func: as_outgoing,
           args: [off],
@@ -146,6 +128,7 @@ function polyfill(module, imports, getExports) {
       var kind = readByte();
       if (kind == 0) { // get
         var idx = readByte();
+        debug('get', idx);
         return function(args) {
           return args[idx];
         };
@@ -154,17 +137,21 @@ function polyfill(module, imports, getExports) {
     function readIncoming() {
       var kind = readByte();
       if (kind == 0) { // as
-        debug('as');
+        debug('lowering-as'); debugIndent();
         var ty = readByte();
+        debug('ty =', ty);
         var inExpr = readInExpr();
+        debugDedent();
         return {
           func: as_incoming,
           inExpr,
         }
       } else if (kind == 1) { // alloc-utf8-cstr
-        debug('alloc-utf8-cstr');
+        debug('alloc-utf8-cstr'); debugIndent();
         var name = readStr();
+        debug('name =', name);
         var inExpr = readInExpr();
+        debugDedent();
         return {
           func: alloc_utf8_cstr,
           name,
@@ -220,19 +207,23 @@ function polyfill(module, imports, getExports) {
       if (kind == 0) {
         var namespace = readStr();
         var name = readStr();
-        debug('Binding:', name); debugIndent();
+        debug('Import:', name); debugIndent();
         var importKind = readByte();
-        debug('outgoing'); debugIndent();
+        debug('params'); debugIndent();
         var params = readList(readOutgoing);
-        debugDedent(); debug('incoming'); debugIndent();
+        debugDedent(); debug('results'); debugIndent();
         var results = readList(readIncoming);
         debugDedent(); debugDedent();
         imports[namespace][name] = bindImport(
           imports[namespace][name], importKind, params, results);
       } else if (kind == 1) {
         var name = readStr();
+        debug('Export:', name); debugIndent();
+        debug('params'); debugIndent();
         var params = readList(readIncoming);
+        debugDedent(); debug('results'); debugIndent();
         var results = readList(readOutgoing);
+        debugDedent(); debugDedent();
         exportFixups[name] = makeExporter(params, results);
       }
     }
