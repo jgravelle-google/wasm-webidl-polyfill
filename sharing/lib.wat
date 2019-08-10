@@ -1,24 +1,31 @@
 (import "env" "memory" (memory $0 256 256))
 (data (i32.const 16) "Hello from C\00")
 
-(import "host" "getConsole" (func $getConsole (result i32)))
-(import "host" "log" (func $log (param i32 i32)))
+(import "host" "log" (func $log (param anyref i32)))
 
-(global $console (mut i32) (i32.const -1))
+(table 1 anyref)
 
-(func $init (export "init")
-  (global.set $console (call $getConsole))
+(func $readTable (result anyref)
+  (table.get 0 (i32.const 0))
+)
+
+(func $init (export "init") (param $console anyref)
+  (table.set 0 (i32.const 0) (local.get $console))
   (call $log
-    (global.get $console)
+    (call $readTable)
     (i32.const 16)
   )
 )
 
 (func $cLog (export "cLog") (param $ptr i32)
   (call $log
-    (global.get $console)
+    (call $readTable)
     (local.get $ptr)
   )
+)
+
+(func $constaddr_1024 (export "constaddr_1024") (result i32)
+  (i32.const 1024)
 )
 
 ;; WebIDL
@@ -42,6 +49,6 @@
 (@webidl func-binding
   export "cLog"
   (param
-    domString ;; utf8_constaddr_1024
+    (alloc-utf8-cstr (alloc-export "constaddr_1024") (get 0))
   )
 )
