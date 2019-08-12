@@ -11,6 +11,11 @@ function debugIndent() {
 function debugDedent() {
   debugIndentLevel -= 1;
 }
+function debugBinding(name, self, args) {
+  debug('in binding', name); debugIndent();
+  debug('this =', self);
+  debug('args =', args);
+}
 
 function polyfill(module, imports, getExports) {
   var refMap = {};
@@ -22,8 +27,10 @@ function polyfill(module, imports, getExports) {
     var memory = imports['env']['memory'] || getExports()['memory'];
     u8 = new Uint8Array(memory.buffer);
   }
-  function utf8_cstr(ptr) {
-    debug('in utf8_cstr:', ptr);
+  function utf8_cstr(args) {
+    debugBinding('utf8_cstr', this, args);
+    const ptr = args[this.off];
+    debug('ptr =', ptr);
     initMemory();
     var result = '';
     var i = ptr;
@@ -31,18 +38,11 @@ function polyfill(module, imports, getExports) {
       result += String.fromCharCode(u8[i]);
       i++;
     }
+    debugDedent();
     return result;
   }
-  function utf8_outparam_buffer(str, ptr, bufferLength) {
-    initMemory();
-    var len = Math.min(str.length, bufferLength);
-    for (var i = 0; i < len; ++i) {
-      u8[ptr + i] = str.charCodeAt(i);
-    }
-    return len;
-  }
   function alloc_utf8_cstr(args) {
-    debug('in alloc_utf8_cstr:', args);
+    debugBinding('alloc_utf8_cstr', this, args);
     initMemory();
     var str = this.inExpr(args);
     var addr = getExports()[this.name](str.length + 1);
@@ -50,6 +50,7 @@ function polyfill(module, imports, getExports) {
       u8[addr + i] = str.charCodeAt(i);
     }
     u8[addr + str.length] = 0;
+    debugDedent();
     return addr;
   }
   function utf8_ptr_len(ptr, len) {
@@ -62,21 +63,26 @@ function polyfill(module, imports, getExports) {
   }
 
   // Lifting
-  function as_outgoing(x) {
-    return x;
+  function as_outgoing(args) {
+    debugBinding('as_outgoing', this, args);
+    debugDedent();
+    return args[this.off];
   }
-  function lift_func_idx(tableName, idx) {
-    debug('lift_func_idx:', tableName, idx);
-    return getExports()[tableName].get(idx);
+  function lift_func_idx(args) {
+    debugBinding('lift_func_idx', this, args);
+    debugDedent();
+    return getExports()[this.tableName].get(this.idx);
   }
 
   // Lowering
   function as_incoming(args) {
+    debugBinding('as_incoming', this, args);
+    debugDedent();
     return this.inExpr(args);
   }
-  function lower_func_idx() {
-    console.log(this);
-    console.log(arguments);
+  function lower_func_idx(args) {
+    debugBinding('lower_func_idx', this, args);
+    debugDedent();
     throw 'Unimplemented: lower_func_idx'
   }
 
@@ -124,7 +130,7 @@ function polyfill(module, imports, getExports) {
         debugDedent();
         return {
           func: as_outgoing,
-          args: [off],
+          off,
         };
       } else if (kind == 1) { // utf8-cstr
         debug('utf8-cstr');
@@ -132,7 +138,7 @@ function polyfill(module, imports, getExports) {
         var off = readByte();
         return {
           func: utf8_cstr,
-          args: [off],
+          off,
         };
       } else if (kind == 2) { // lift-func-idx
         debug('lift-func-idx'); debugIndent();
@@ -145,7 +151,8 @@ function polyfill(module, imports, getExports) {
         debugDedent();
         return {
           func: lift_func_idx,
-          args: [tableName, off],
+          tableName,
+          off,
         };
       } else {
         throw 'Unknown lifting binding: ' + kind
@@ -203,15 +210,14 @@ function polyfill(module, imports, getExports) {
 
     function bindImport(f, importKind, params, results) {
       return function() {
-        var args = [];
+        debug('in bindImport'); debugIndent();
+        const args = [];
+        debug('params =', params);
         for (var i = 0; i < params.length; ++i) {
-          var param = params[i];
-          var incArgs = [];
-          for (var j = 0; j < param.args.length; ++j) {
-            incArgs.push(arguments[param.args[j]]);
-          }
-          args.push(param.func.apply(null, incArgs));
+          const param = params[i];
+          args.push(param.func.apply(param, [arguments]));
         }
+        debug('args =', args);
         var retVal;
         if (importKind === 0) {
           // static
@@ -220,17 +226,19 @@ function polyfill(module, imports, getExports) {
           // method
           retVal = f.apply(args[0], args.slice(1));
         }
+        debug('results =', results);
         if (results.length > 0) {
           var result = results[0]; // todo: multi-return?
           retVal = result.func.apply(result, [[retVal]]);
         }
+        debugDedent();
         return retVal;
       };
     }
     function makeExporter(param, result) {
       return function(f) {
         // maybe this works? TODO, find out
-        importKind = 0;
+        const importKind = 0;
         return bindImport(f, importKind, param, result);
       }
     }
