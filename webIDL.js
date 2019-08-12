@@ -6,13 +6,14 @@ function debug() {
   }
 }
 function debugIndent() {
+  if (arguments.length > 0) { debug.apply(null, arguments); }
   debugIndentLevel += 1;
 }
 function debugDedent() {
   debugIndentLevel -= 1;
 }
 function debugBinding(name, self, args) {
-  debug('in binding', name); debugIndent();
+  debugIndent('in binding', name);
   debug('this =', self);
   debug('args =', args);
 }
@@ -112,7 +113,7 @@ function polyfill(module, imports, getExports) {
       var len = readByte();
       var result = [];
       for (var i = 0; i < len; ++i) {
-        debug(i); debugIndent();
+        debugIndent(i);
         result.push(f());
         debugDedent();
       }
@@ -122,7 +123,7 @@ function polyfill(module, imports, getExports) {
     function readOutgoing() {
       var kind = readByte();
       if (kind == 0) { // as
-        debug('lifting-as'); debugIndent();
+        debugIndent('lifting-as');
         var ty = readByte();
         debug('ty =', ty);
         var off = readByte();
@@ -141,7 +142,7 @@ function polyfill(module, imports, getExports) {
           off,
         };
       } else if (kind == 2) { // lift-func-idx
-        debug('lift-func-idx'); debugIndent();
+        debugIndent('lift-func-idx');
         var ty = readByte();
         debug('ty =', ty);
         var tableName = readStr();
@@ -172,7 +173,7 @@ function polyfill(module, imports, getExports) {
     function readIncoming() {
       var kind = readByte();
       if (kind == 0) { // as
-        debug('lowering-as'); debugIndent();
+        debugIndent('lowering-as');
         var ty = readByte();
         debug('ty =', ty);
         var inExpr = readInExpr();
@@ -182,7 +183,7 @@ function polyfill(module, imports, getExports) {
           inExpr,
         }
       } else if (kind == 1) { // alloc-utf8-cstr
-        debug('alloc-utf8-cstr'); debugIndent();
+        debugIndent('alloc-utf8-cstr');
         var name = readStr();
         debug('name =', name);
         var inExpr = readInExpr();
@@ -193,7 +194,7 @@ function polyfill(module, imports, getExports) {
           inExpr,
         }
       } else if (kind == 2) { // lower-func-idx
-        debug('lower-func-idx'); debugIndent();
+        debugIndent('lower-func-idx');
         var tableName = readStr();
         debug('tableName =', tableName);
         var inExpr = readInExpr();
@@ -210,7 +211,7 @@ function polyfill(module, imports, getExports) {
 
     function bindImport(f, importKind, params, results) {
       return function() {
-        debug('in bindImport'); debugIndent();
+        debugIndent('in bindImport');
         const args = [];
         debug('params =', params);
         for (var i = 0; i < params.length; ++i) {
@@ -256,21 +257,21 @@ function polyfill(module, imports, getExports) {
       if (kind == 0) {
         var namespace = readStr();
         var name = readStr();
-        debug('Import:', name); debugIndent();
+        debugIndent('Import:', name);
         var importKind = readByte();
-        debug('params'); debugIndent();
+        debugIndent('params');
         var params = readList(readOutgoing);
-        debugDedent(); debug('results'); debugIndent();
+        debugDedent(); debugIndent('results');
         var results = readList(readIncoming);
         debugDedent(); debugDedent();
         imports[namespace][name] = bindImport(
           imports[namespace][name], importKind, params, results);
       } else if (kind == 1) {
         var name = readStr();
-        debug('Export:', name); debugIndent();
-        debug('params'); debugIndent();
+        debugIndent('Export:', name);
+        debugIndent('params');
         var params = readList(readIncoming);
-        debugDedent(); debug('results'); debugIndent();
+        debugDedent(); debugIndent('results');
         var results = readList(readOutgoing);
         debugDedent(); debugDedent();
         exportFixups[name] = makeExporter(params, results);
