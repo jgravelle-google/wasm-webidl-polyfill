@@ -17,9 +17,14 @@ const moduleImports = {
 
 async function loadFile() {
   wasm = await webIDL.loadWasm('callbacks/callbacks.wasm', moduleImports);
+
+  // Call function which calls callCallback import
   wasm.exports._Z11doSomethingv();
+
+  // Return a callback and call it
   wasm.exports._Z11getCallbackv()(6);
 
+  // Provide a JS function to wasm, which calls it twice
   var total = 0;
   wasm.exports._Z20callImportedCallbackPFviE((x) => {
     console.log('in added js function:');
