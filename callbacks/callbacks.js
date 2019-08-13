@@ -10,12 +10,8 @@ if (isD8) {
 var wasm;
 const moduleImports = {
   env: {
-    console_log: (ptr, arg) => console.log(ptr, arg),
-    callCallback: (ptr) => {
-      console.log("called callCallback w/", ptr);
-      let table = wasm.exports['__indirect_function_table'];
-      table.get(ptr)(15);
-    },
+    console_log: (str, arg) => console.log(str, arg),
+    callCallback: (f) => f(15),
   },
 };
 

@@ -72,7 +72,7 @@ function polyfill(module, imports, getExports) {
   function lift_func_idx(args) {
     debugBinding('lift_func_idx', this, args);
     debugDedent();
-    return getExports()[this.tableName].get(this.off);
+    return getExports()[this.tableName].get(args[this.off]);
   }
 
   // Lowering

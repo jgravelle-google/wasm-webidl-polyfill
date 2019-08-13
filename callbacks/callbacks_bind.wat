@@ -11,6 +11,17 @@
     (as (webidl-type $int) (idx 1))
   )
 )
+(@webidl func-binding
+  import "env" "callCallback"
+  static
+  (param
+    (lift-func-idx
+      (type $intCallback)
+      (table "__indirect_function_table")
+      (idx 0)
+    )
+  )
+)
 
 (@webidl func-binding
   export "_Z11doSomethingv"
@@ -24,7 +35,7 @@
     (lift-func-idx
       (type $intCallback)
       (table "__indirect_function_table")
-      (idx 1)
+      (idx 0)
     )
   )
 )
