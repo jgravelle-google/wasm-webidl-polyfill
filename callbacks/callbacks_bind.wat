@@ -24,7 +24,7 @@
     (lift-func-idx
       (type $intCallback)
       (table "__indirect_function_table")
-      (idx 0)
+      (idx 1)
     )
   )
 )

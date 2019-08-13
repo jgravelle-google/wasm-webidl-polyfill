@@ -24,16 +24,12 @@ async function loadFile() {
   wasm.exports._Z11doSomethingv();
   wasm.exports._Z11getCallbackv()(6);
 
-  // let idx = wasm.exports._Z11getCallbackv();
-  // let table = wasm.exports['__indirect_function_table'];
-  // table.get(idx)(6);
-
-  // let jsIdx = table.length;
-  // table.grow(1);
-  // table.set(jsIdx, webIDL.jsToWasmFunc((x) => {
-  //   console.log('in added js function: ', jsIdx);
-  //   console.log('  x =', x);
-  // }, 'vi'));
-  // wasm.exports._Z20callImportedCallbackPFviE(jsIdx);
+  var total = 0;
+  wasm.exports._Z20callImportedCallbackPFviE((x) => {
+    console.log('in added js function:');
+    console.log('  x =', x);
+    total += x;
+    console.log('  total =', total);
+  });
 }
 loadFile();

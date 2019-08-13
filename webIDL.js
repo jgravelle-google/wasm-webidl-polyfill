@@ -72,7 +72,7 @@ function polyfill(module, imports, getExports) {
   function lift_func_idx(args) {
     debugBinding('lift_func_idx', this, args);
     debugDedent();
-    return getExports()[this.tableName].get(this.idx);
+    return getExports()[this.tableName].get(this.off);
   }
 
   // Lowering
@@ -83,8 +83,13 @@ function polyfill(module, imports, getExports) {
   }
   function lower_func_idx(args) {
     debugBinding('lower_func_idx', this, args);
+    const table = getExports()[this.tableName];
+    let jsIdx = table.length;
+    table.grow(1);
+    const fn = this.inExpr(args);
+    table.set(jsIdx, jsToWasmFunc(fn, this.fnType));
     debugDedent();
-    throw 'Unimplemented: lower_func_idx'
+    return jsIdx;
   }
 
   var exportFixups = {};
@@ -199,10 +204,12 @@ function polyfill(module, imports, getExports) {
         debug('tableName =', tableName);
         var inExpr = readInExpr();
         debugDedent();
+        const fnType = 'vi'; // TODO: don't hardcode
         return {
           func: lower_func_idx,
           tableName,
           inExpr,
+          fnType,
         };
       } else {
         throw 'Unknown lowering binding: ' + kind
@@ -238,8 +245,7 @@ function polyfill(module, imports, getExports) {
     }
     function makeExporter(param, result) {
       return function(f) {
-        // maybe this works? TODO, find out
-        const importKind = 0;
+        const importKind = 0; // "static", see bindImport
         return bindImport(f, importKind, param, result);
       }
     }
@@ -362,11 +368,14 @@ async function loadWasm(filename, imports) {
   imports = imports || {};
   var bytes;
   if (typeof read === 'function') {
+    // D8
     bytes = read(filename, 'binary');
   } else if (typeof require === 'function') {
+    // NodeJS
     var fs = require('fs');
     bytes = fs.readFileSync(filename);
   } else {
+    // Browser
     var fetched = await fetch(filename);
     bytes = await fetched.arrayBuffer();
   }
