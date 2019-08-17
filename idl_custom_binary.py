@@ -280,13 +280,22 @@ def parse_interface(contents):
     )
 
   # Adapter function definitions
-  funcs = []
+  adapters = []
   for elem in sexprs:
     if elem[0] != '@interface' or elem[1] != 'adapt':
       continue
-    assert elem[2][0] == 'import'
-    namespace = elem[2][1][1:-1]
-    name = elem[2][2][1:-1]
+    if elem[2][0] == 'import':
+      namespace = elem[2][1][1:-1]
+      name = elem[2][2][1:-1]
+      # import == 0
+      preamble = [0] + str_encode(namespace) + str_encode(name)
+      types = WASM_TYPES
+    else:
+      assert elem[2][0] == 'export'
+      name = elem[2][1][1:-1]
+      # export == 1
+      preamble = [1] + str_encode(name)
+      types = INTERFACE_TYPES
     params = []
     results = []
     instrs = []
@@ -299,10 +308,10 @@ def parse_interface(contents):
       if s[0] == 'param':
         param_name = s[1]
         param_name_idx[param_name] = len(params)
-        params.append([WASM_TYPES[s[2]]])
+        params.append([types[s[2]]])
       elif s[0] == 'result':
         for r in s[1:]:
-          results.append([WASM_TYPES[r]])
+          results.append([types[r]])
       else:
         # stop at instructions
         break
@@ -337,11 +346,16 @@ def parse_interface(contents):
       elif instr == 'write-utf8':
         arg = next()
         instrs.append([4] + str_encode(arg[1:-1]))
+      elif instr == 'as-wasm':
+        arg = next()
+        instrs.append([5, WASM_TYPES[arg]])
+      elif instr == 'as-interface':
+        arg = next()
+        instrs.append([6, INTERFACE_TYPES[arg]])
       else:
         assert False, 'Unknown instr: ' + str(instr)
-    funcs.append(
-      str_encode(namespace) +
-      str_encode(name) +
+    adapters.append(
+      preamble +
       segment(params) +
       segment(results) +
       segment(instrs)
@@ -350,7 +364,7 @@ def parse_interface(contents):
   return (
     segment(export_decls) +
     segment(import_funcs) +
-    segment(funcs)
+    segment(adapters)
   )
 
 def main(args):

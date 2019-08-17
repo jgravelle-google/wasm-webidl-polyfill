@@ -1,4 +1,5 @@
-var debugEnabled = true;
+var debugEnabled = false;
+// debugEnabled = true;
 var debugIndentLevel = 0;
 function debug() {
   if (debugEnabled) {
@@ -175,6 +176,14 @@ function polyfill(module, imports, getExports) {
       stack.push(len);
       debugDedent();
     },
+    asWasm(stack) {
+      debugInstr('asWasm', this, stack);
+      debugDedent();
+    },
+    asInterface(stack) {
+      debugInstr('asInterface', this, stack);
+      debugDedent();
+    },
   }
 
   const exportFixups = {};
@@ -298,6 +307,20 @@ function polyfill(module, imports, getExports) {
           func: Instructions.writeUtf8,
           alloc,
         };
+      } else if (opcode === 5) { // as-wasm
+        debugIndent('as-wasm');
+        const ty = readWasmType();
+        instr = {
+          func: Instructions.asWasm,
+          ty,
+        }
+      } else if (opcode === 6) { // as-interface
+        debugIndent('as-interface');
+        const ty = readInterfaceType();
+        instr = {
+          func: Instructions.asInterface,
+          ty,
+        }
       } else {
         throw 'Unknown opcode: ' + opcode;
       }
@@ -467,15 +490,28 @@ function polyfill(module, imports, getExports) {
     debug('adapter count:', numAdapters);
     for (var i = 0; i < numAdapters; ++i) {
       debugIndent('adapter', i);
-      const namespace = readStr();
-      debug('namespace =', namespace);
+      const isImport = readByte() == 0;
+      debug('isImport =', isImport)
+      let namespace;
+      let typeReader;
+      if (isImport) {
+        namespace = readStr();
+        debug('namespace =', namespace);
+        typeReader = readWasmType;
+      } else {
+        typeReader = readInterfaceType;
+      }
       const name = readStr();
       debug('name =', name);
-      const params = readList(readWasmType, 'params');
-      const results = readList(readWasmType, 'results');
+      const params = readList(typeReader, 'params');
+      const results = readList(typeReader, 'results');
       const instrs = readList(readInstr, 'instrs');
       debugDedent();
-      imports[namespace][name] = makeAdapter(params, results, instrs);
+      if (isImport) {
+        imports[namespace][name] = makeAdapter(params, results, instrs);
+      } else {
+        exportFixups[name] = makeAdapter(params, results, instrs);
+      }
     }
 
     debug('unread bytes:', bytes[byteIndex] !== undefined);
@@ -591,7 +627,7 @@ async function loadWasm(filename, imports) {
     fakeExports[name] = instance.exports[name];
   }
   for (var name in fixups) {
-    fakeExports[name] = fixups[name](fakeExports[name]);
+    fakeExports[name] = fixups[name];
   }
   var fakeInstance = {};
   for (var name in instance) {
