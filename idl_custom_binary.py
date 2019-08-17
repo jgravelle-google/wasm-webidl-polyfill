@@ -317,12 +317,28 @@ def parse_interface(contents):
       instr = next()
       if instr == 'arg.get':
         arg = next()
-        assert arg in param_name_idx, 'Missing ' + arg + ' in ' + str(param_name_idx)
+        assert arg in param_name_idx, (
+          'Missing param ' + arg + ' in ' + str(param_name_idx)
+        )
         idx = param_name_idx[arg]
         instrs.append([0, idx])
+      elif instr == 'call':
+        arg = next()
+        assert arg in import_name_idx, (
+          'Missing import ' + arg + ' in ' + str(import_name_idx)
+        )
+        idx = import_name_idx[arg]
+        instrs.append([1, idx])
+      elif instr == 'call-export':
+        arg = next()
+        instrs.append([2] + str_encode(arg[1:-1]))
+      elif instr == 'read-utf8':
+        instrs.append([3])
+      elif instr == 'write-utf8':
+        arg = next()
+        instrs.append([4] + str_encode(arg[1:-1]))
       else:
-        pass
-        # assert False, 'Unknown instr: ' + str(instr)
+        assert False, 'Unknown instr: ' + str(instr)
     funcs.append(
       str_encode(namespace) +
       str_encode(name) +

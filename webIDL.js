@@ -162,10 +162,26 @@ function polyfill(module, imports, getExports) {
 
     function readInstr(argument) {
       const opcode = readByte();
-      if (opcode == 0) { // arg.get
+      if (opcode === 0) { // arg.get
         debugIndent('arg.get');
         const arg = readByte();
         debug('arg =', arg);
+      } else if (opcode === 1) { // call
+        debugIndent('call');
+        const arg = readByte();
+        debug('arg =', arg);
+      } else if (opcode === 2) { // call-export
+        debugIndent('call-export');
+        const arg = readStr();
+        debug('arg =', arg);
+      } else if (opcode === 3) { // read-utf8
+        debugIndent('read-utf8');
+      } else if (opcode === 4) { // write-utf8
+        debugIndent('write-utf8');
+        const arg = readStr();
+        debug('arg =', arg);
+      } else {
+        throw 'Unknown opcode: ' + opcode;
       }
       debugDedent();
     }
