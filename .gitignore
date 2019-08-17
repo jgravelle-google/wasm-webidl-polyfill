@@ -4,4 +4,4 @@
 */webIDL.js
 *.wat
 !*_base.wat
-!*_bind.wat
+!*_interface.wat

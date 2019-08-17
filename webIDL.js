@@ -1,4 +1,4 @@
-var debugEnabled = false;
+var debugEnabled = true;
 var debugIndentLevel = 0;
 function debug() {
   if (debugEnabled) {
@@ -16,7 +16,9 @@ function debugInstr(name, self, stack, args) {
   debugIndent('in instruction', name);
   debug('this =', self);
   debug('stack =', stack);
-  debug('args =', args);
+  if (args !== undefined) {
+    debug('args =', args);
+  }
 }
 
 function polyfill(module, imports, getExports) {
@@ -104,6 +106,8 @@ function polyfill(module, imports, getExports) {
     return ret;
   }
   function popN(stack, n) {
+    // Return an array of N items, in the order they were pushed
+    // e.g. stack = [4, 5, 6]; popN(stack, 2) == [5, 6]
     const ret = [];
     for (var i = 0; i < n; ++i) {
       ret.unshift(pop(stack));
@@ -124,6 +128,7 @@ function polyfill(module, imports, getExports) {
       debug('args =', args);
       const ret = imp.import.apply(null, args);
       if (imp.results.length > 0) {
+        debug('ret =', ret);
         stack.push(ret);
       }
       debugDedent();
@@ -137,6 +142,7 @@ function polyfill(module, imports, getExports) {
       const fn = getExports()[this.exportName];
       const ret = fn.apply(null, args);
       if (exp.results.length > 0) {
+        debug('ret =', ret);
         stack.push(ret);
       }
       debugDedent();
@@ -147,11 +153,12 @@ function polyfill(module, imports, getExports) {
       const ptr = pop(stack);
       debug('ptr, len =', ptr, len);
       initMemory();
-      let result = '';
+      let str = '';
       for (var i = 0; i < len; ++i) {
-        result += String.fromCharCode(u8[ptr + i]);
+        str += String.fromCharCode(u8[ptr + i]);
       }
-      stack.push(result);
+      debug('str =', str);
+      stack.push(str);
       debugDedent();
     },
     writeUtf8(stack) {
