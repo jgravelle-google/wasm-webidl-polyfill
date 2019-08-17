@@ -279,9 +279,62 @@ def parse_interface(contents):
       segment(results)
     )
 
+  # Adapter function definitions
+  funcs = []
+  for elem in sexprs:
+    if elem[0] != '@interface' or elem[1] != 'adapt':
+      continue
+    assert elem[2][0] == 'import'
+    namespace = elem[2][1][1:-1]
+    name = elem[2][2][1:-1]
+    params = []
+    results = []
+    instrs = []
+
+    i = 3
+    # read params + results
+    param_name_idx = {}
+    while i < len(elem):
+      s = elem[i]
+      if s[0] == 'param':
+        param_name = s[1]
+        param_name_idx[param_name] = len(params)
+        params.append([WASM_TYPES[s[2]]])
+      elif s[0] == 'result':
+        for r in s[1:]:
+          results.append([WASM_TYPES[r]])
+      else:
+        # stop at instructions
+        break
+      i += 1
+    # read instructions
+    def next():
+      nonlocal i
+      ret = elem[i]
+      i += 1
+      return ret
+    while i < len(elem):
+      instr = next()
+      if instr == 'arg.get':
+        arg = next()
+        assert arg in param_name_idx, 'Missing ' + arg + ' in ' + str(param_name_idx)
+        idx = param_name_idx[arg]
+        instrs.append([0, idx])
+      else:
+        pass
+        # assert False, 'Unknown instr: ' + str(instr)
+    funcs.append(
+      str_encode(namespace) +
+      str_encode(name) +
+      segment(params) +
+      segment(results) +
+      segment(instrs)
+    )
+
   return (
     segment(export_decls) +
-    segment(import_funcs)
+    segment(import_funcs) +
+    segment(funcs)
   )
 
 def main(args):

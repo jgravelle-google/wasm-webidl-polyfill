@@ -160,6 +160,16 @@ function polyfill(module, imports, getExports) {
       return result;
     }
 
+    function readInstr(argument) {
+      const opcode = readByte();
+      if (opcode == 0) { // arg.get
+        debugIndent('arg.get');
+        const arg = readByte();
+        debug('arg =', arg);
+      }
+      debugDedent();
+    }
+
     function readOutgoing() {
       var kind = readByte();
       if (kind == 0) { // as
@@ -308,6 +318,22 @@ function polyfill(module, imports, getExports) {
       const results = readList(readInterfaceType, 'results');
       debugDedent();
     }
+
+    const numAdapters = readLEB();
+    debug('adapter count:', numAdapters);
+    for (var i = 0; i < numAdapters; ++i) {
+      debugIndent('adapter', i);
+      const namespace = readStr();
+      debug('namespace =', namespace);
+      const name = readStr();
+      debug('name =', name);
+      const params = readList(readWasmType, 'params');
+      const results = readList(readWasmType, 'results');
+      const instrs = readList(readInstr, 'instrs');
+      debugDedent();
+    }
+
+    console.log('unread bytes:', bytes[byteIndex] !== undefined);
 
     throw 'Done';
 
