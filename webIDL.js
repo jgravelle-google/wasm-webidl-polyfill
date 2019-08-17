@@ -1,4 +1,4 @@
-var debugEnabled = true;
+var debugEnabled = false;
 var debugIndentLevel = 0;
 function debug() {
   if (debugEnabled) {
@@ -12,9 +12,10 @@ function debugIndent() {
 function debugDedent() {
   debugIndentLevel -= 1;
 }
-function debugBinding(name, self, args) {
-  debugIndent('in binding', name);
+function debugInstr(name, self, stack, args) {
+  debugIndent('in instruction', name);
   debug('this =', self);
+  debug('stack =', stack);
   debug('args =', args);
 }
 
@@ -92,7 +93,97 @@ function polyfill(module, imports, getExports) {
     return jsIdx;
   }
 
-  var exportFixups = {};
+  // Export declarations, used for call-export arities
+  const exportDecls = {};
+  // Original imported functions, accessed by index
+  const origImports = [];
+
+  function pop(stack) {
+    const ret = stack[stack.length - 1];
+    stack.splice(stack.length - 1, 1);
+    return ret;
+  }
+  function popN(stack, n) {
+    const ret = [];
+    for (var i = 0; i < n; ++i) {
+      ret.unshift(pop(stack));
+    }
+    return ret;
+  }
+  const Instructions = {
+    argGet(stack, args) {
+      debugInstr('argGet', this, stack, args);
+      stack.push(args[this.arg]);
+      debugDedent();
+    },
+    call(stack) {
+      debugInstr('call', this, stack);
+      const imp = origImports[this.importIdx];
+      debug('import decl =', imp);
+      const args = popN(stack, imp.params.length);
+      debug('args =', args);
+      const ret = imp.import.apply(null, args);
+      if (imp.results.length > 0) {
+        stack.push(ret);
+      }
+      debugDedent();
+    },
+    callExport(stack) {
+      debugInstr('callExport', this, stack);
+      const exp = exportDecls[this.exportName];
+      debug('export decl =', exp);
+      const args = popN(stack, exp.params.length);
+      debug('args =', args);
+      const fn = getExports()[this.exportName];
+      const ret = fn.apply(null, args);
+      if (exp.results.length > 0) {
+        stack.push(ret);
+      }
+      debugDedent();
+    },
+    readUtf8(stack) {
+      debugInstr('readUtf8', this, stack);
+      const len = pop(stack);
+      const ptr = pop(stack);
+      debug('ptr, len =', ptr, len);
+      initMemory();
+      let result = '';
+      for (var i = 0; i < len; ++i) {
+        result += String.fromCharCode(u8[ptr + i]);
+      }
+      stack.push(result);
+      debugDedent();
+    },
+    writeUtf8(stack) {
+      debugInstr('writeUtf8', this, stack);
+      const str = pop(stack);
+      debug('str =', str);
+      const alloc = getExports()[this.alloc];
+      const len = str.length;
+      const ptr = alloc(len);
+      for (var i = 0; i < len; ++i) {
+        u8[ptr + i] = str.charCodeAt(i);
+      }
+      stack.push(ptr);
+      stack.push(len);
+      debugDedent();
+    },
+  }
+
+  const exportFixups = {};
+
+  function makeAdapter(params, results, instrs) {
+    return function() {
+      const stack = [];
+      for (var i = 0; i < instrs.length; ++i) {
+        const instr = instrs[i];
+        instr.func.apply(instr, [stack, arguments]);
+      }
+      if (results.length > 0) {
+        return stack[stack.length - 1];
+      }
+    };
+  }
 
   var bindingSections = WebAssembly.Module.customSections(module, 'webIDLBindings');
   for (var section = 0; section < bindingSections.length; ++section) {
@@ -160,30 +251,51 @@ function polyfill(module, imports, getExports) {
       return result;
     }
 
-    function readInstr(argument) {
+    function readInstr() {
       const opcode = readByte();
+      let instr;
       if (opcode === 0) { // arg.get
         debugIndent('arg.get');
         const arg = readByte();
         debug('arg =', arg);
+        instr = {
+          func: Instructions.argGet,
+          arg,
+        };
       } else if (opcode === 1) { // call
         debugIndent('call');
-        const arg = readByte();
-        debug('arg =', arg);
+        const importIdx = readByte();
+        debug('importIdx =', importIdx);
+        instr = {
+          func: Instructions.call,
+          importIdx,
+        };
       } else if (opcode === 2) { // call-export
         debugIndent('call-export');
-        const arg = readStr();
-        debug('arg =', arg);
+        const exportName = readStr();
+        debug('exportName =', exportName);
+        instr = {
+          func: Instructions.callExport,
+          exportName,
+        };
       } else if (opcode === 3) { // read-utf8
         debugIndent('read-utf8');
+        instr = {
+          func: Instructions.readUtf8,
+        };
       } else if (opcode === 4) { // write-utf8
         debugIndent('write-utf8');
-        const arg = readStr();
-        debug('arg =', arg);
+        const alloc = readStr();
+        debug('alloc =', alloc);
+        instr = {
+          func: Instructions.writeUtf8,
+          alloc,
+        };
       } else {
         throw 'Unknown opcode: ' + opcode;
       }
       debugDedent();
+      return instr;
     }
 
     function readOutgoing() {
@@ -320,6 +432,10 @@ function polyfill(module, imports, getExports) {
       const params = readList(readWasmType, 'params');
       const results = readList(readWasmType, 'results');
       debugDedent();
+      exportDecls[name] = {
+        params,
+        results,
+      };
     }
 
     const numImportFuncs = readLEB();
@@ -333,6 +449,11 @@ function polyfill(module, imports, getExports) {
       const params = readList(readInterfaceType, 'params');
       const results = readList(readInterfaceType, 'results');
       debugDedent();
+      origImports.push({
+        import: imports[namespace][name],
+        params,
+        results,
+      });
     }
 
     const numAdapters = readLEB();
@@ -347,45 +468,10 @@ function polyfill(module, imports, getExports) {
       const results = readList(readWasmType, 'results');
       const instrs = readList(readInstr, 'instrs');
       debugDedent();
+      imports[namespace][name] = makeAdapter(params, results, instrs);
     }
 
-    console.log('unread bytes:', bytes[byteIndex] !== undefined);
-
-    throw 'Done';
-
-    // var numTypes = readLEB();
-    // for (var i = 0; i < numTypes; ++i) {
-    //   // skip doing anything with types for now
-    //   // assumption, types are all 1 byte long, this will change
-    //   readByte();
-    // }
-
-    // var numDecls = readLEB();
-    // for (var i = 0; i < numDecls; ++i) {
-    //   var kind = readByte();
-    //   if (kind == 0) {
-    //     var namespace = readStr();
-    //     var name = readStr();
-    //     debugIndent('Import:', name);
-    //     var importKind = readByte();
-    //     debugIndent('params');
-    //     var params = readList(readOutgoing);
-    //     debugDedent(); debugIndent('results');
-    //     var results = readList(readIncoming);
-    //     debugDedent(); debugDedent();
-    //     imports[namespace][name] = bindImport(
-    //       imports[namespace][name], importKind, params, results);
-    //   } else if (kind == 1) {
-    //     var name = readStr();
-    //     debugIndent('Export:', name);
-    //     debugIndent('params');
-    //     var params = readList(readIncoming);
-    //     debugDedent(); debugIndent('results');
-    //     var results = readList(readOutgoing);
-    //     debugDedent(); debugDedent();
-    //     exportFixups[name] = makeExporter(params, results);
-    //   }
-    // }
+    debug('unread bytes:', bytes[byteIndex] !== undefined);
   }
 
   // Effectively this automates:
