@@ -128,7 +128,27 @@ function polyfill(module, imports, getExports) {
       }
       return ty;
     }
-    function readList(f) {
+    function readInterfaceType() {
+      // TODO: interface types may be multi-byte, and depend on a type section
+      const ty = readByte();
+      if (debugEnabled) {
+        const typeMap = {
+          0: 'any',
+          1: 'int',
+          2: 'float',
+          3: 'string',
+        };
+        debug('ty =', typeMap[ty]);
+      }
+      return ty;
+    }
+
+    function readList(f, debugMsg) {
+      if (debugMsg !== undefined) {
+        debugIndent(debugMsg);
+      } else {
+        debugIndent();
+      }
       var len = readByte();
       var result = [];
       for (var i = 0; i < len; ++i) {
@@ -136,6 +156,7 @@ function polyfill(module, imports, getExports) {
         result.push(f());
         debugDedent();
       }
+      debugDedent();
       return result;
     }
 
@@ -270,14 +291,24 @@ function polyfill(module, imports, getExports) {
       debugIndent('export', i);
       const name = readStr();
       debug('name =', name);
-      debugIndent('params');
-      const params = readList(readWasmType);
-      debugDedent();
-      debugIndent('results');
-      const results = readList(readWasmType);
-      debugDedent();
+      const params = readList(readWasmType, 'params');
+      const results = readList(readWasmType, 'results');
       debugDedent();
     }
+
+    const numImportFuncs = readLEB();
+    debug('import count:', numImportFuncs);
+    for (var i = 0; i < numImportFuncs; ++i) {
+      debugIndent('import', i);
+      const namespace = readStr();
+      debug('namespace =', namespace);
+      const name = readStr();
+      debug('name =', name);
+      const params = readList(readInterfaceType, 'params');
+      const results = readList(readInterfaceType, 'results');
+      debugDedent();
+    }
+
     throw 'Done';
 
     // var numTypes = readLEB();

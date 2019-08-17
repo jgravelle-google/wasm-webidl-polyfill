@@ -4,12 +4,11 @@ import json
 import os
 import sys
 
-WEBIDL_TYPES = {
+INTERFACE_TYPES = {
   'any': 0,
-  'DOMString': 1,
-  'int': 2,
-  'float': 3,
-  'TempCallback': 64,
+  'int': 1,
+  'float': 2,
+  'string': 3,
 }
 WASM_TYPES = {
   "i32": 0x7f,
@@ -248,7 +247,42 @@ def parse_interface(contents):
       segment(results)
     )
 
-  return segment(export_decls)
+  # Imported function declarations
+  import_funcs = []
+  import_name_idx = {}
+  for elem in sexprs:
+    if elem[0] != '@interface' or elem[1] != 'func':
+      continue
+    if len(elem) < 4 or elem[3][0] != 'import':
+      continue
+    # store import declaration for use in instructions later
+    # e.g. '$foo' => 2
+    func_name = elem[2]
+    import_name_idx[func_name] = len(import_funcs)
+
+    namespace = elem[3][1][1:-1]
+    name = elem[3][2][1:-1]
+    params = []
+    results = []
+    for s in elem[4:]:
+      if s[0] == 'param':
+        for p in s[1:]:
+          params.append([INTERFACE_TYPES[p]])
+      else:
+        assert s[0] == 'result'
+        for r in s[1:]:
+          results.append([INTERFACE_TYPES[r]])
+    import_funcs.append(
+      str_encode(namespace) +
+      str_encode(name) +
+      segment(params) +
+      segment(results)
+    )
+
+  return (
+    segment(export_decls) +
+    segment(import_funcs)
+  )
 
 def main(args):
   assert len(args) == 2, "Must have infile and outfile (in that order)"
