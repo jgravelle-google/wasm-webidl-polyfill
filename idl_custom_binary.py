@@ -352,6 +352,10 @@ def parse_interface(contents):
       elif instr == 'as-interface':
         arg = next()
         instrs.append([6, INTERFACE_TYPES[arg]])
+      elif instr == 'table-ref-add':
+        instrs.append([7])
+      elif instr == 'table-ref-get':
+        instrs.append([8])
       else:
         assert False, 'Unknown instr: ' + str(instr)
     adapters.append(

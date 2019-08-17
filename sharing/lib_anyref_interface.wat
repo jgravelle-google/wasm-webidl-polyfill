@@ -1,16 +1,24 @@
 ;; Interface
-(@interface export "init" (param i32))
 (@interface export "cLog" (param i32))
 (@interface export "strlen" (param i32) (result i32))
 (@interface export "write_null_byte" (param i32 i32) (result i32))
+
+(@interface func $getConsole (import "host" "getConsole")
+  (result any)
+)
+(@interface adapt (import "host" "getConsole")
+  (result anyref)
+  call $getConsole
+  as-wasm anyref
+)
 
 (@interface func $log (import "host" "log")
   (param any string)
 )
 (@interface adapt (import "host" "log")
-  (param $logger i32) (param $str i32)
+  (param $logger anyref) (param $str i32)
   arg.get $logger
-  table-ref-get
+  as-interface any
   arg.get $str
   arg.get $str
   call-export "strlen"
@@ -26,9 +34,4 @@
   call-export "cLog"
 )
 
-(@interface adapt (export "init")
-  (param $console any)
-  arg.get $console
-  table-ref-add
-  call-export "init"
-)
+(@interface forward (export "init"))

@@ -1,28 +1,25 @@
-;; void log(RefID, char*);
-(import "host" "log" (func $log (param i32 i32)))
+(import "host" "log" (func $log (param anyref i32)))
 
 (memory (export "memory") 16)
 (data (i32.const 16) "Hello from C\00")
 
-;; Store ref ID at addr=32
-(func $setRefAddr (param $id i32)
-  (i32.store (i32.const 32) (local.get $id))
-)
-(func $getRefAddr (result i32)
-  (i32.load (i32.const 32))
+(table 1 anyref)
+
+(func $readTable (result anyref)
+  (table.get 0 (i32.const 0))
 )
 
-(func $init (export "init") (param $console i32)
-  (call $setRefAddr (local.get $console))
+(func $init (export "init") (param $console anyref)
+  (table.set 0 (i32.const 0) (local.get $console))
   (call $log
-    (call $getRefAddr)
+    (call $readTable)
     (i32.const 16)
   )
 )
 
 (func $cLog (export "cLog") (param $ptr i32)
   (call $log
-    (call $getRefAddr)
+    (call $readTable)
     (local.get $ptr)
   )
 )

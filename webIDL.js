@@ -100,6 +100,8 @@ function polyfill(module, imports, getExports) {
   const exportDecls = {};
   // Original imported functions, accessed by index
   const origImports = [];
+  // Table of references, converts i32 <-> any
+  const refTable = [];
 
   function pop(stack) {
     const ret = stack[stack.length - 1];
@@ -185,17 +187,40 @@ function polyfill(module, imports, getExports) {
       debugInstr('asInterface', this, stack);
       debugDedent();
     },
+    tableRefAdd(stack) {
+      debugInstr('tableRefAdd', this, stack);
+      const ref = pop(stack);
+      debug('ref = ', ref);
+      const idx = refTable.length;
+      refTable.push(ref);
+      debug('refTable =', refTable);
+      debug('idx = ', idx);
+      stack.push(idx);
+      debugDedent();
+    },
+    tableRefGet(stack) {
+      debugInstr('tableRefGet', this, stack);
+      const idx = pop(stack);
+      debug('idx = ', idx);
+      debug('refTable =', refTable);
+      const ref = refTable[idx];
+      debug('ref = ', ref);
+      stack.push(ref);
+      debugDedent();
+    },
   }
 
   const interface = {};
 
-  function makeAdapter(params, results, instrs) {
+  function makeAdapter(name, params, results, instrs) {
     return function() {
+      debugIndent('Called function:', name);
       const stack = [];
       for (var i = 0; i < instrs.length; ++i) {
         const instr = instrs[i];
         instr.func.apply(instr, [stack, arguments]);
       }
+      debugDedent();
       if (results.length > 0) {
         return stack[stack.length - 1];
       }
@@ -322,6 +347,16 @@ function polyfill(module, imports, getExports) {
           func: Instructions.asInterface,
           ty,
         }
+      } else if (opcode === 7) { // table-ref-add
+        debugIndent('table-ref-add');
+        instr = {
+          func: Instructions.tableRefAdd,
+        };
+      } else if (opcode === 8) { // table-ref-get
+        debugIndent('table-ref-get');
+        instr = {
+          func: Instructions.tableRefGet,
+        };
       } else {
         throw 'Unknown opcode: ' + opcode;
       }
@@ -509,9 +544,9 @@ function polyfill(module, imports, getExports) {
       const instrs = readList(readInstr, 'instrs');
       debugDedent();
       if (isImport) {
-        imports[namespace][name] = makeAdapter(params, results, instrs);
+        imports[namespace][name] = makeAdapter(name, params, results, instrs);
       } else {
-        interface[name] = makeAdapter(params, results, instrs);
+        interface[name] = makeAdapter(name, params, results, instrs);
       }
     }
 
@@ -523,6 +558,7 @@ function polyfill(module, imports, getExports) {
       debug('name =', name);
       Object.defineProperty(interface, name, {
         get() {
+          debug('Getting forwarded export:', name);
           return getExports()[name];
         }
       });
