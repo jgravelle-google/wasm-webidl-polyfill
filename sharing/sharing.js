@@ -9,9 +9,6 @@ if (isD8) {
 
 async function main() {
   var lib = await webIDL.loadWasm('sharing/lib.wasm', {
-    env: {
-      memory: new WebAssembly.Memory({ 'initial': 256, 'maximum': 256 }),
-    },
     host: {
       log: function(obj, msg) { obj.log(msg); },
     },
@@ -20,11 +17,11 @@ async function main() {
   lib.exports.cLog("Hello there");
 
   var main = await webIDL.loadWasm('sharing/main.wasm', {
-    env: {
-      memory: new WebAssembly.Memory({ 'initial': 256, 'maximum': 256 }),
-    },
     lib: lib.exports,
   });
   main.exports.main();
+
+  console.log('lib.memory =', lib.exports.memory);
+  console.log('main.memory =', main.exports.memory);
 }
 main();

@@ -361,10 +361,20 @@ def parse_interface(contents):
       segment(instrs)
     )
 
+  # List of exports to re-export
+  forwards = []
+  for elem in sexprs:
+    if elem[0] != '@interface' or elem[1] != 'forward':
+      continue
+    assert elem[2][0] == 'export'
+    name = elem[2][1][1:-1]
+    forwards.append(str_encode(name))
+
   return (
     segment(export_decls) +
     segment(import_funcs) +
-    segment(adapters)
+    segment(adapters) +
+    segment(forwards)
   )
 
 def main(args):

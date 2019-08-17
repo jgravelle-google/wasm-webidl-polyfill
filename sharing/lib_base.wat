@@ -1,7 +1,7 @@
-(import "env" "memory" (memory $0 256 256))
-(data (i32.const 16) "Hello from C\00")
-
 (import "host" "log" (func $log (param anyref i32)))
+
+(memory (export "memory") 16)
+(data (i32.const 16) "Hello from C\00")
 
 (table 1 anyref)
 

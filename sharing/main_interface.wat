@@ -13,3 +13,5 @@
   read-utf8
   call $cLog
 )
+
+(@interface forward (export "main"))

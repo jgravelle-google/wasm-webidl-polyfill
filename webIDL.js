@@ -29,7 +29,7 @@ function polyfill(module, imports, getExports) {
   function initMemory() {
     if (u8) return;
     debug('initializing memory');
-    var memory = imports['env']['memory'] || getExports()['memory'];
+    var memory = imports['env'] && imports['env']['memory'] || getExports()['memory'];
     u8 = new Uint8Array(memory.buffer);
   }
   function utf8_cstr(args) {
@@ -169,6 +169,7 @@ function polyfill(module, imports, getExports) {
       const alloc = getExports()[this.alloc];
       const len = str.length;
       const ptr = alloc(len);
+      initMemory();
       for (var i = 0; i < len; ++i) {
         u8[ptr + i] = str.charCodeAt(i);
       }
@@ -186,7 +187,7 @@ function polyfill(module, imports, getExports) {
     },
   }
 
-  const exportFixups = {};
+  const interface = {};
 
   function makeAdapter(params, results, instrs) {
     return function() {
@@ -510,8 +511,22 @@ function polyfill(module, imports, getExports) {
       if (isImport) {
         imports[namespace][name] = makeAdapter(params, results, instrs);
       } else {
-        exportFixups[name] = makeAdapter(params, results, instrs);
+        interface[name] = makeAdapter(params, results, instrs);
       }
+    }
+
+    const numForwards = readLEB();
+    debug('forward count:', numForwards);
+    for (var i = 0; i < numForwards; ++i) {
+      debugIndent('forward', i);
+      const name = readStr();
+      debug('name =', name);
+      Object.defineProperty(interface, name, {
+        get() {
+          return getExports()[name];
+        }
+      });
+      debugDedent();
     }
 
     debug('unread bytes:', bytes[byteIndex] !== undefined);
@@ -531,7 +546,7 @@ function polyfill(module, imports, getExports) {
   //   bindingTypes[1](res, ptr, len);
   // };
 
-  return exportFixups;
+  return interface;
 }
 
 // Taken wholesale from Emscripten, renamed from convertJsFunctionToWasm
@@ -617,23 +632,16 @@ async function loadWasm(filename, imports) {
   function getExports() {
     return instance.exports;
   }
-  var fixups = polyfill(module, imports, getExports);
+  var interface = polyfill(module, imports, getExports);
   instance = new WebAssembly.Instance(module, imports);
 
   // Actual WebAssembly.Instance exports are Read-Only, so we have to create a
   // fake object here
-  var fakeExports = {};
-  for (var name in instance.exports) {
-    fakeExports[name] = instance.exports[name];
-  }
-  for (var name in fixups) {
-    fakeExports[name] = fixups[name];
-  }
   var fakeInstance = {};
   for (var name in instance) {
     fakeInstance[name] = instance[name];
   }
-  fakeInstance.exports = fakeExports;
+  fakeInstance.exports = interface;
   return fakeInstance;
 }
 

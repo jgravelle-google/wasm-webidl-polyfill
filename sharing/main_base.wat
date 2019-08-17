@@ -1,9 +1,9 @@
-(import "env" "memory" (memory $0 256 256))
+(import "lib" "cLog" (func $cLog (param i32 i32)))
+
+(memory (export "memory") 16)
 
 ;; len+chars
 (data (i32.const 16) "\0fHello from Rust")
-
-(import "lib" "cLog" (func $cLog (param i32 i32)))
 
 (func $main (export "main")
   (call $cLog

@@ -23,3 +23,5 @@
   write-utf8 "alloc"
   call-export "write_null_byte"
 )
+
+(@interface forward (export "main"))

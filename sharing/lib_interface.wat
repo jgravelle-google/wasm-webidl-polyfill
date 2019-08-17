@@ -33,3 +33,5 @@
   call-export "write_null_byte"
   call-export "cLog"
 )
+
+(@interface forward (export "init"))
