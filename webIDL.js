@@ -1,4 +1,4 @@
-var debugEnabled = false;
+var debugEnabled = true;
 var debugIndentLevel = 0;
 function debug() {
   if (debugEnabled) {
@@ -99,12 +99,12 @@ function polyfill(module, imports, getExports) {
     var bytes = new Uint8Array(bindingSections[section]);
     var byteIndex = 0;
 
-    function readLEB() {
-      // TODO: don't assume LEBs are <128
-      return bytes[byteIndex++];
-    }
     function readByte() {
       return bytes[byteIndex++];
+    }
+    function readLEB() {
+      // TODO: don't assume LEBs are <128
+      return readByte();
     }
     function readStr() {
       var len = readByte();
@@ -113,6 +113,20 @@ function polyfill(module, imports, getExports) {
         result += String.fromCharCode(readByte());
       }
       return result;
+    }
+    function readWasmType() {
+      const ty = readByte();
+      if (debugEnabled) {
+        const typeMap = {
+          0x7f: 'i32',
+          0x7e: 'i64',
+          0x7d: 'f32',
+          0x7c: 'f64',
+          0x6f: 'anyref',
+        };
+        debug('ty =', typeMap[ty]);
+      }
+      return ty;
     }
     function readList(f) {
       var len = readByte();
@@ -250,39 +264,55 @@ function polyfill(module, imports, getExports) {
       }
     }
 
-    var numTypes = readLEB();
-    for (var i = 0; i < numTypes; ++i) {
-      // skip doing anything with types for now
-      // assumption, types are all 1 byte long, this will change
-      readByte();
+    const numExports = readLEB();
+    debug('export count:', numExports);
+    for (var i = 0; i < numExports; ++i) {
+      debugIndent('export', i);
+      const name = readStr();
+      debug('name =', name);
+      debugIndent('params');
+      const params = readList(readWasmType);
+      debugDedent();
+      debugIndent('results');
+      const results = readList(readWasmType);
+      debugDedent();
+      debugDedent();
     }
+    throw 'Done';
 
-    var numDecls = readLEB();
-    for (var i = 0; i < numDecls; ++i) {
-      var kind = readByte();
-      if (kind == 0) {
-        var namespace = readStr();
-        var name = readStr();
-        debugIndent('Import:', name);
-        var importKind = readByte();
-        debugIndent('params');
-        var params = readList(readOutgoing);
-        debugDedent(); debugIndent('results');
-        var results = readList(readIncoming);
-        debugDedent(); debugDedent();
-        imports[namespace][name] = bindImport(
-          imports[namespace][name], importKind, params, results);
-      } else if (kind == 1) {
-        var name = readStr();
-        debugIndent('Export:', name);
-        debugIndent('params');
-        var params = readList(readIncoming);
-        debugDedent(); debugIndent('results');
-        var results = readList(readOutgoing);
-        debugDedent(); debugDedent();
-        exportFixups[name] = makeExporter(params, results);
-      }
-    }
+    // var numTypes = readLEB();
+    // for (var i = 0; i < numTypes; ++i) {
+    //   // skip doing anything with types for now
+    //   // assumption, types are all 1 byte long, this will change
+    //   readByte();
+    // }
+
+    // var numDecls = readLEB();
+    // for (var i = 0; i < numDecls; ++i) {
+    //   var kind = readByte();
+    //   if (kind == 0) {
+    //     var namespace = readStr();
+    //     var name = readStr();
+    //     debugIndent('Import:', name);
+    //     var importKind = readByte();
+    //     debugIndent('params');
+    //     var params = readList(readOutgoing);
+    //     debugDedent(); debugIndent('results');
+    //     var results = readList(readIncoming);
+    //     debugDedent(); debugDedent();
+    //     imports[namespace][name] = bindImport(
+    //       imports[namespace][name], importKind, params, results);
+    //   } else if (kind == 1) {
+    //     var name = readStr();
+    //     debugIndent('Export:', name);
+    //     debugIndent('params');
+    //     var params = readList(readIncoming);
+    //     debugDedent(); debugIndent('results');
+    //     var results = readList(readOutgoing);
+    //     debugDedent(); debugDedent();
+    //     exportFixups[name] = makeExporter(params, results);
+    //   }
+    // }
   }
 
   // Effectively this automates:
@@ -302,7 +332,7 @@ function polyfill(module, imports, getExports) {
   return exportFixups;
 }
 
-// Taken wholesale from Emscripten
+// Taken wholesale from Emscripten, renamed from convertJsFunctionToWasm
 function jsToWasmFunc(func, sig) {
   // The module is static, with the exception of the type section, which is
   // generated based on the signature passed in.

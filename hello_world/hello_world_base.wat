@@ -28,3 +28,36 @@
 (func $alloc (export "alloc") (param i32) (result i32)
   (i32.const 1024)
 )
+
+(func $strlen (export "strlen") (param $ptr i32) (result i32)
+  (local $len i32)
+  (local $ch i32)
+  (loop
+    ;; ch = *ptr
+    (local.set $ch
+      (i32.load8_u (local.get $ptr))
+    )
+    ;; if (ch == 0) { return len; }
+    (if
+      (i32.eqz (local.get $ch))
+      (return (local.get $len))
+    )
+    ;; ptr++, len++
+    (local.set $ptr
+      (i32.add (local.get $ptr) (i32.const 1))
+    )
+    (local.set $len
+      (i32.add (local.get $len) (i32.const 1))
+    )
+    (br 0)
+  )
+  (unreachable)
+)
+
+(func (export "write_null_byte") (param $ptr i32) (param $len i32) (result i32)
+  (i32.store8
+    (i32.add (local.get $ptr) (local.get $len))
+    (i32.const 0)
+  )
+  (local.get $ptr)
+)

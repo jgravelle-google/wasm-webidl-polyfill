@@ -59,8 +59,10 @@ def parse_sexprs(text):
     if cur != '':
       stack[-1].append(cur)
     return ''
-  for i in range(len(text)):
+  i = 0
+  while i < len(text):
     c = text[i]
+    i += 1
     if c == '(':
       cur = sep()
       stack.append([])
@@ -72,7 +74,12 @@ def parse_sexprs(text):
     elif c.isspace():
       cur = sep()
     else:
-      cur += c
+      if c == ';' and i < len(text) and text[i] == ';':
+        # Handle comments
+        while i < len(text) and text[i] != '\n':
+          i += 1
+      else:
+        cur += c
   return stack[0]
 
 def str_encode(text):
@@ -213,12 +220,42 @@ def inExpr(sexpr):
     return [idByte, off]
   assert False, 'Unknown inExpr: ' + str(sexpr)
 
+def parse_interface(contents):
+  # using ';; Interface' as a sentinel to avoid naively sexpr parsing all the .wat
+  idl_section = contents.split(';; Interface\n')[1].strip()
+  sexprs = parse_sexprs(idl_section)
+
+  # Use export decls to avoid parsing the whole wat
+  # Probably won't need this in the full version.
+  export_decls = []
+  for elem in sexprs:
+    if elem[0] != '@interface' or elem[1] != 'export':
+      continue
+    name = elem[2][1:-1]
+    params = []
+    results = []
+    for s in elem[3:]:
+      if s[0] == 'param':
+        for p in s[1:]:
+          params.append([WASM_TYPES[p]])
+      else:
+        assert s[0] == 'result'
+        for r in s[1:]:
+          results.append([WASM_TYPES[r]])
+    export_decls.append(
+      str_encode(name) +
+      segment(params) +
+      segment(results)
+    )
+
+  return segment(export_decls)
+
 def main(args):
   assert len(args) == 2, "Must have infile and outfile (in that order)"
   infile = args[0]
   outfile = args[1]
   contents = open(infile, 'r').read()
-  data = parse_webidl(contents)
+  data = parse_interface(contents)
   binary = custom_section_binary('webIDLBindings', data)
   with open(outfile, 'wb') as f:
     f.write(bytearray(binary))

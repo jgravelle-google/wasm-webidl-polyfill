@@ -7,9 +7,12 @@ var moduleImports = {
   },
   host: {
     console_log: console.log,
-    document_title: function() { return process.title; },
+    document_title: function() { return process.argv[0]; },
   },
 };
 
-var wasm = webIDL.loadWasm('hello_world/hello_world.wasm', moduleImports);
-wasm.exports.main();
+async function loadFile() {
+  var wasm = await webIDL.loadWasm('hello_world/hello_world.wasm', moduleImports);
+  wasm.exports.main();
+}
+loadFile();
