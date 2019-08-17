@@ -5,10 +5,10 @@ import os
 import sys
 
 INTERFACE_TYPES = {
-  'any': 0,
-  'int': 1,
-  'float': 2,
-  'string': 3,
+  'any': 0x00,
+  'int': 0x01,
+  'float': 0x02,
+  'string': 0x03,
 }
 WASM_TYPES = {
   "i32": 0x7f,
@@ -330,32 +330,32 @@ def parse_interface(contents):
           'Missing param ' + arg + ' in ' + str(param_name_idx)
         )
         idx = param_name_idx[arg]
-        instrs.append([0, idx])
+        instrs.append([0x00, idx])
       elif instr == 'call':
         arg = next()
         assert arg in import_name_idx, (
           'Missing import ' + arg + ' in ' + str(import_name_idx)
         )
         idx = import_name_idx[arg]
-        instrs.append([1, idx])
+        instrs.append([0x01, idx])
       elif instr == 'call-export':
         arg = next()
-        instrs.append([2] + str_encode(arg[1:-1]))
+        instrs.append([0x02] + str_encode(arg[1:-1]))
       elif instr == 'read-utf8':
-        instrs.append([3])
+        instrs.append([0x03])
       elif instr == 'write-utf8':
         arg = next()
-        instrs.append([4] + str_encode(arg[1:-1]))
+        instrs.append([0x04] + str_encode(arg[1:-1]))
       elif instr == 'as-wasm':
         arg = next()
-        instrs.append([5, WASM_TYPES[arg]])
+        instrs.append([0x05, WASM_TYPES[arg]])
       elif instr == 'as-interface':
         arg = next()
-        instrs.append([6, INTERFACE_TYPES[arg]])
+        instrs.append([0x06, INTERFACE_TYPES[arg]])
       elif instr == 'table-ref-add':
-        instrs.append([7])
+        instrs.append([0x07])
       elif instr == 'table-ref-get':
-        instrs.append([8])
+        instrs.append([0x08])
       else:
         assert False, 'Unknown instr: ' + str(instr)
     adapters.append(

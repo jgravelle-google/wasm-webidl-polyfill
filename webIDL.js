@@ -266,10 +266,10 @@ function polyfill(module, imports, getExports) {
       const ty = readByte();
       if (debugEnabled) {
         const typeMap = {
-          0: 'any',
-          1: 'int',
-          2: 'float',
-          3: 'string',
+          0x00: 'any',
+          0x01: 'int',
+          0x02: 'float',
+          0x03: 'string',
         };
         debug('ty =', typeMap[ty]);
       }
@@ -296,7 +296,7 @@ function polyfill(module, imports, getExports) {
     function readInstr() {
       const opcode = readByte();
       let instr;
-      if (opcode === 0) { // arg.get
+      if (opcode === 0x00) { // arg.get
         debugIndent('arg.get');
         const arg = readByte();
         debug('arg =', arg);
@@ -304,7 +304,7 @@ function polyfill(module, imports, getExports) {
           func: Instructions.argGet,
           arg,
         };
-      } else if (opcode === 1) { // call
+      } else if (opcode === 0x01) { // call
         debugIndent('call');
         const importIdx = readByte();
         debug('importIdx =', importIdx);
@@ -312,7 +312,7 @@ function polyfill(module, imports, getExports) {
           func: Instructions.call,
           importIdx,
         };
-      } else if (opcode === 2) { // call-export
+      } else if (opcode === 0x02) { // call-export
         debugIndent('call-export');
         const exportName = readStr();
         debug('exportName =', exportName);
@@ -320,12 +320,12 @@ function polyfill(module, imports, getExports) {
           func: Instructions.callExport,
           exportName,
         };
-      } else if (opcode === 3) { // read-utf8
+      } else if (opcode === 0x03) { // read-utf8
         debugIndent('read-utf8');
         instr = {
           func: Instructions.readUtf8,
         };
-      } else if (opcode === 4) { // write-utf8
+      } else if (opcode === 0x04) { // write-utf8
         debugIndent('write-utf8');
         const alloc = readStr();
         debug('alloc =', alloc);
@@ -333,26 +333,26 @@ function polyfill(module, imports, getExports) {
           func: Instructions.writeUtf8,
           alloc,
         };
-      } else if (opcode === 5) { // as-wasm
+      } else if (opcode === 0x05) { // as-wasm
         debugIndent('as-wasm');
         const ty = readWasmType();
         instr = {
           func: Instructions.asWasm,
           ty,
         }
-      } else if (opcode === 6) { // as-interface
+      } else if (opcode === 0x06) { // as-interface
         debugIndent('as-interface');
         const ty = readInterfaceType();
         instr = {
           func: Instructions.asInterface,
           ty,
         }
-      } else if (opcode === 7) { // table-ref-add
+      } else if (opcode === 0x07) { // table-ref-add
         debugIndent('table-ref-add');
         instr = {
           func: Instructions.tableRefAdd,
         };
-      } else if (opcode === 8) { // table-ref-get
+      } else if (opcode === 0x08) { // table-ref-get
         debugIndent('table-ref-get');
         instr = {
           func: Instructions.tableRefGet,
