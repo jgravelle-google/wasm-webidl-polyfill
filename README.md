@@ -32,6 +32,7 @@ Instruction | Opcode | Immediates | Signature | Description
 `as-interface` | 0x06 | interface-type | [wasmTy(interface)] -> [interface] | Cast a Wasm type to an Interface type
 `table-ref-add` | 0x07 | | [Any] -> [i32] | Add a reference to a table, returns an index for that reference
 `table-ref-get` | 0x08 | | [i32] -> [Any] | Given an index, return the reference associated
+`call-method` | 0x09 | import-index | sig(import) | Call a function import, with the first argument bound as the `this` parameter
 
 ## Binary Format
 

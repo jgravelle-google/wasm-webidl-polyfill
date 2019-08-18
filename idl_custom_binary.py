@@ -226,6 +226,13 @@ def parse_interface(contents):
         instrs.append([0x07])
       elif instr == 'table-ref-get':
         instrs.append([0x08])
+      elif instr == 'call-method':
+        arg = next()
+        assert arg in import_name_idx, (
+          'Missing import ' + arg + ' in ' + str(import_name_idx)
+        )
+        idx = import_name_idx[arg]
+        instrs.append([0x09, idx])
       else:
         assert False, 'Unknown instr: ' + str(instr)
     adapters.append(

@@ -3,9 +3,6 @@
 var webIDL = {loadWasm};
 
 var moduleImports = {
-  env: {
-    memory: new WebAssembly.Memory({ 'initial': 256, 'maximum': 256 }),
-  },
   // document,
   // ? unclear why this needs the indirection, throws with TypeError
   document: {

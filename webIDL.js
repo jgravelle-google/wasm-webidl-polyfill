@@ -3,7 +3,7 @@ var debugEnabled = false;
 var debugIndentLevel = 0;
 function debug() {
   if (debugEnabled) {
-    console.log.apply(this, ['[|DEBUG|]:', '  '.repeat(debugIndentLevel), ...arguments]);
+    console.log.apply(this, ['[|DEBUG|]', '  '.repeat(debugIndentLevel), ...arguments]);
   }
 }
 function debugIndent() {
@@ -27,7 +27,7 @@ function polyfill(module, imports, getExports) {
   function initMemory() {
     if (u8) return;
     debug('initializing memory');
-    var memory = imports['env'] && imports['env']['memory'] || getExports()['memory'];
+    var memory = getExports()['memory'] || imports['env'] && imports['env']['memory'];
     u8 = new Uint8Array(memory.buffer);
   }
 
@@ -141,6 +141,21 @@ function polyfill(module, imports, getExports) {
       const ref = refTable[idx];
       debug('ref = ', ref);
       stack.push(ref);
+      debugDedent();
+    },
+    callMethod(stack) {
+      debugInstr('callMethod', this, stack);
+      const imp = origImports[this.importIdx];
+      debug('import decl =', imp);
+      const args = popN(stack, imp.params.length - 1);
+      const self = pop(stack);
+      debug('self =', self);
+      debug('args =', args);
+      const ret = imp.import.apply(self, args);
+      if (imp.results.length > 0) {
+        debug('ret =', ret);
+        stack.push(ret);
+      }
       debugDedent();
     },
   }
@@ -291,6 +306,14 @@ function polyfill(module, imports, getExports) {
         debugIndent('table-ref-get');
         instr = {
           func: Instructions.tableRefGet,
+        };
+      } else if (opcode === 0x09) { // call-method
+        debugIndent('call-method');
+        const importIdx = readByte();
+        debug('importIdx =', importIdx);
+        instr = {
+          func: Instructions.callMethod,
+          importIdx,
         };
       } else {
         throw 'Unknown opcode: ' + opcode;
