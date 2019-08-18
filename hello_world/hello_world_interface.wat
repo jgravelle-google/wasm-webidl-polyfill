@@ -3,7 +3,7 @@
 (@interface export "write_null_byte" (param i32 i32) (result i32))
 
 (@interface func $log (import "host" "console_log")
-  (param string)
+  (param String)
 )
 (@interface adapt (import "host" "console_log")
   (param $ptr i32)
@@ -15,7 +15,7 @@
 )
 
 (@interface func $title (import "host" "document_title")
-  (result string)
+  (result String)
 )
 (@interface adapt (import "host" "document_title")
   (result i32)

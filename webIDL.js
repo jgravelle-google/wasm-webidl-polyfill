@@ -266,10 +266,10 @@ function polyfill(module, imports, getExports) {
       const ty = readByte();
       if (debugEnabled) {
         const typeMap = {
-          0x00: 'any',
-          0x01: 'int',
-          0x02: 'float',
-          0x03: 'string',
+          0x00: 'Any',
+          0x01: 'Int',
+          0x02: 'Float',
+          0x03: 'String',
         };
         debug('ty =', typeMap[ty]);
       }

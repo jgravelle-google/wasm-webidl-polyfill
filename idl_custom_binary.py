@@ -5,10 +5,10 @@ import os
 import sys
 
 INTERFACE_TYPES = {
-  'any': 0x00,
-  'int': 0x01,
-  'float': 0x02,
-  'string': 0x03,
+  'Any': 0x00,
+  'Int': 0x01,
+  'Float': 0x02,
+  'String': 0x03,
 }
 WASM_TYPES = {
   "i32": 0x7f,

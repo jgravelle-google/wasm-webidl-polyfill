@@ -4,7 +4,7 @@
 (@interface export "write_null_byte" (param i32 i32) (result i32))
 
 (@interface func $getConsole (import "host" "getConsole")
-  (result any)
+  (result Any)
 )
 (@interface adapt (import "host" "getConsole")
   (result anyref)
@@ -13,12 +13,12 @@
 )
 
 (@interface func $log (import "host" "log")
-  (param any string)
+  (param Any String)
 )
 (@interface adapt (import "host" "log")
   (param $logger anyref) (param $str i32)
   arg.get $logger
-  as-interface any
+  as-interface Any
   arg.get $str
   arg.get $str
   call-export "strlen"
@@ -27,7 +27,7 @@
 )
 
 (@interface adapt (export "cLog")
-  (param $str string)
+  (param $str String)
   arg.get $str
   write-utf8 "constaddr_1024"
   call-export "write_null_byte"

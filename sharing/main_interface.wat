@@ -4,7 +4,7 @@
 (@interface export "write_null_byte" (param i32 i32) (result i32))
 
 (@interface func $cLog (import "lib" "cLog")
-  (param string)
+  (param String)
 )
 (@interface adapt (import "lib" "cLog")
   (param $ptr i32) (param $len i32)
