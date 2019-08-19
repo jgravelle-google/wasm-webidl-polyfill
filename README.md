@@ -1,4 +1,4 @@
-# WebIDL Bindings Polyfill
+# Interface Types Polyfill
 
 ## Summary
 

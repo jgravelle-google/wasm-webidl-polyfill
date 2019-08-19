@@ -39,18 +39,12 @@ function polyfill(module, imports, getExports) {
   const refTable = [];
 
   function pop(stack) {
-    const ret = stack[stack.length - 1];
-    stack.splice(stack.length - 1, 1);
-    return ret;
+    return stack.splice(stack.length - 1, 1)[0];
   }
   function popN(stack, n) {
     // Return an array of N items, in the order they were pushed
     // e.g. stack = [4, 5, 6]; popN(stack, 2) == [5, 6]
-    const ret = [];
-    for (var i = 0; i < n; ++i) {
-      ret.unshift(pop(stack));
-    }
-    return ret;
+    return stack.splice(stack.length - n, n);
   }
   const Instructions = {
     argGet(stack, args) {
