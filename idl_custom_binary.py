@@ -5,17 +5,17 @@ import os
 import sys
 
 INTERFACE_TYPES = {
-  'Any': 0x00,
-  'Int': 0x01,
-  'Float': 0x02,
-  'String': 0x03,
+  'Int': 0x7f,
+  'Float': 0x7e,
+  'Any': 0x7d,
+  'String': 0x7c,
 }
 WASM_TYPES = {
-  "i32": 0x7f,
-  "i64": 0x7e,
-  "f32": 0x7d,
-  "f64": 0x7c,
-  "anyref": 0x6f,
+  'i32': 0x7f,
+  'i64': 0x7e,
+  'f32': 0x7d,
+  'f64': 0x7c,
+  'anyref': 0x6f,
 }
 
 def leb_u32(value):
@@ -117,6 +117,38 @@ def parse_interface(contents):
       segment(results)
     )
 
+  # Type declarations
+  type_decls = []
+  type_name_idx = {}
+  def wasm_type(name):
+    assert name in WASM_TYPES
+    return [WASM_TYPES[name]]
+  def interface_type(name):
+    # Name -> Interface type bytes
+    # TODO: in future
+    if name in INTERFACE_TYPES:
+      return [INTERFACE_TYPES[name]]
+    assert name in type_name_idx
+    return [type_name_idx[name]]
+  for elem in sexprs:
+    if elem[0] != '@interface' or elem[1] != 'type':
+      continue
+    name = elem[2]
+    field_names = []
+    field_types = []
+    assert elem[3] == 'struct'
+    for field in elem[4:]:
+      assert len(field) == 3
+      assert field[0] == 'field'
+      field_names.append(str_encode(field[1][1:-1]))
+      field_types.append(interface_type(field[2]))
+    type_name_idx[name] = len(type_decls)
+    type_decls.append(
+      str_encode(name) +
+      segment(field_names) +
+      segment(field_types)
+    )
+
   # Imported function declarations
   import_funcs = []
   import_name_idx = {}
@@ -137,11 +169,11 @@ def parse_interface(contents):
     for s in elem[4:]:
       if s[0] == 'param':
         for p in s[1:]:
-          params.append([INTERFACE_TYPES[p]])
+          params.append(interface_type(p))
       else:
         assert s[0] == 'result'
         for r in s[1:]:
-          results.append([INTERFACE_TYPES[r]])
+          results.append(interface_type(r))
     import_funcs.append(
       str_encode(namespace) +
       str_encode(name) +
@@ -159,13 +191,13 @@ def parse_interface(contents):
       name = elem[2][2][1:-1]
       # import == 0
       preamble = [0] + str_encode(namespace) + str_encode(name)
-      types = WASM_TYPES
+      readType = wasm_type
     else:
       assert elem[2][0] == 'export'
       name = elem[2][1][1:-1]
       # export == 1
       preamble = [1] + str_encode(name)
-      types = INTERFACE_TYPES
+      readType = interface_type
     params = []
     results = []
     instrs = []
@@ -191,10 +223,10 @@ def parse_interface(contents):
       if s[0] == 'param':
         param_name = s[1]
         param_name_idx[param_name] = len(params)
-        params.append([types[s[2]]])
+        params.append(readType(s[2]))
       elif s[0] == 'result':
         for r in s[1:]:
-          results.append([types[r]])
+          results.append(readType(r))
       else:
         # stop at instructions
         break
@@ -241,6 +273,12 @@ def parse_interface(contents):
         )
         idx = import_name_idx[arg]
         instrs.append([0x09, idx])
+      elif instr == 'make-struct':
+        arg = reader.next()
+      elif instr == 'set-field':
+        arg = reader.next()
+      elif instr == 'get-field':
+        arg = reader.next()
       else:
         assert False, 'Unknown instr: ' + str(instr)
     adapters.append(
@@ -261,6 +299,7 @@ def parse_interface(contents):
 
   return (
     segment(export_decls) +
+    segment(type_decls) +
     segment(import_funcs) +
     segment(adapters) +
     segment(forwards)

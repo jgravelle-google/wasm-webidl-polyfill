@@ -1,5 +1,5 @@
 var debugEnabled = false;
-// debugEnabled = true;
+debugEnabled = true;
 var debugIndentLevel = 0;
 function debug() {
   if (debugEnabled) {
@@ -205,18 +205,20 @@ function polyfill(module, imports, getExports) {
       }
       return ty;
     }
+    const interfaceTypeMap = {
+      0x7f: 'Int',
+      0x7e: 'Float',
+      0x7d: 'Any',
+      0x7c: 'String',
+    };
     function readInterfaceType() {
       // TODO: interface types may be multi-byte, and depend on a type section
       const ty = readByte();
-      if (debugEnabled) {
-        const typeMap = {
-          0x00: 'Any',
-          0x01: 'Int',
-          0x02: 'Float',
-          0x03: 'String',
-        };
-        debug('ty =', typeMap[ty]);
+      let name = interfaceTypeMap[ty];
+      if (typeof name === 'object') {
+        name = name.name;
       }
+      debug('ty =', ty, ":", name);
       return ty;
     }
 
@@ -328,6 +330,23 @@ function polyfill(module, imports, getExports) {
       exportDecls[name] = {
         params,
         results,
+      };
+    }
+
+    const numTypes = readLEB();
+    debug('type count:', numTypes);
+    for (var i = 0; i < numTypes; ++i) {
+      debugIndent('type', i);
+      const name = readStr();
+      debug('name =', name);
+      const fields = readList(readStr, 'fields');
+      debug('fields =', fields);
+      const types = readList(readInterfaceType, 'types');
+      debugDedent();
+      interfaceTypeMap[i] = {
+        name,
+        fields,
+        types,
       };
     }
 

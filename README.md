@@ -54,9 +54,10 @@ Instruction | Opcode | Immediates | Signature | Description
 The current binary format in this repo is a placeholder format. In the future it
 should align with the proposed binary format.
 
-There are four subsections:
+There are five subsections:
 
 1. Exported function declarations
+1. Type declarations
 1. Imported function declarations
 1. Adapter functions
 1. Forwarded exports
