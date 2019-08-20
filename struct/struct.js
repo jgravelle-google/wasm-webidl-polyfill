@@ -14,7 +14,7 @@ var wasmImports = {
 };
 
 async function run() {
-  const wasm = await webIDL.loadWasm('sequence/sequence.wasm', wasmImports);
+  const wasm = await webIDL.loadWasm('struct/struct.wasm', wasmImports);
   const ex = wasm.exports;
 
   ex.addComment({score: 2019, message: "Test post"});
