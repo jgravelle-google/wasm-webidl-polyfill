@@ -1,5 +1,5 @@
 var debugEnabled = false;
-debugEnabled = true;
+// debugEnabled = true;
 var debugIndentLevel = 0;
 function debug() {
   if (debugEnabled) {
@@ -37,6 +37,14 @@ function polyfill(module, imports, getExports) {
   const origImports = [];
   // Table of references, converts i32 <-> any
   const refTable = [];
+
+  // Type declarations
+  const interfaceTypeMap = {
+    0x7f: 'Int',
+    0x7e: 'Float',
+    0x7d: 'Any',
+    0x7c: 'String',
+  };
 
   function pop(stack) {
     return stack.splice(stack.length - 1, 1)[0];
@@ -152,6 +160,36 @@ function polyfill(module, imports, getExports) {
       }
       debugDedent();
     },
+    makeStruct(stack) {
+      debugInstr('makeStruct', this, stack);
+      const decl = interfaceTypeMap[this.ty];
+      const ret = {};
+      for (var key of decl.fields) {
+        ret[key] = null;
+      }
+      debug('ret =', ret);
+      stack.push(ret);
+      debugDedent();
+    },
+    setField(stack) {
+      debugInstr('setField', this, stack);
+      const val = pop(stack);
+      const obj = pop(stack);
+      debug('obj, val =', obj, val);
+      obj[this.field] = val;
+      debug('obj =', obj);
+      stack.push(obj);
+      debugDedent();
+    },
+    getField(stack) {
+      debugInstr('getField', this, stack);
+      const obj = pop(stack);
+      debug('obj =', obj);
+      const val = obj[this.field];
+      debug('val =', val);
+      stack.push(val);
+      debugDedent();
+    },
   }
 
   const interface = {};
@@ -205,12 +243,6 @@ function polyfill(module, imports, getExports) {
       }
       return ty;
     }
-    const interfaceTypeMap = {
-      0x7f: 'Int',
-      0x7e: 'Float',
-      0x7d: 'Any',
-      0x7c: 'String',
-    };
     function readInterfaceType() {
       // TODO: interface types may be multi-byte, and depend on a type section
       const ty = readByte();
@@ -310,6 +342,29 @@ function polyfill(module, imports, getExports) {
         instr = {
           func: Instructions.callMethod,
           importIdx,
+        };
+      } else if (opcode === 0x0a) { // make-struct
+        debugIndent('make-struct');
+        const ty = readInterfaceType();
+        instr = {
+          func: Instructions.makeStruct,
+          ty,
+        };
+      } else if (opcode === 0x0b) { // set-field
+        debugIndent('set-field');
+        const field = readStr();
+        debug('field =', field);
+        instr = {
+          func: Instructions.setField,
+          field,
+        };
+      } else if (opcode === 0x0c) { // get-field
+        debugIndent('get-field');
+        const field = readStr();
+        debug('field =', field);
+        instr = {
+          func: Instructions.getField,
+          field,
         };
       } else {
         throw 'Unknown opcode: ' + opcode;

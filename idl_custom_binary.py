@@ -275,10 +275,17 @@ def parse_interface(contents):
         instrs.append([0x09, idx])
       elif instr == 'make-struct':
         arg = reader.next()
+        assert arg in type_name_idx, (
+          'Missing type ' + arg + ' in ' + str(type_name_idx)
+        )
+        idx = type_name_idx[arg]
+        instrs.append([0x0a, idx])
       elif instr == 'set-field':
         arg = reader.next()
+        instrs.append([0x0b] + str_encode(arg[1:-1]))
       elif instr == 'get-field':
         arg = reader.next()
+        instrs.append([0x0c] + str_encode(arg[1:-1]))
       else:
         assert False, 'Unknown instr: ' + str(instr)
     adapters.append(

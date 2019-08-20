@@ -24,5 +24,7 @@ async function run() {
   ex.addComment({score: 404, message: "I'M LOST"});
 
   ex.displayAll();
+
+  console.log('alloc =', ex.alloc);
 }
 run();
