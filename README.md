@@ -7,6 +7,21 @@ This repo holds some sample / test code for the development of the WebAssembly
 purpose is to iterate on the proposal by letting us experiment with running
 code.
 
+## Repo structure
+
+Individual demos live in folders. Given a folder named Foo:
+
+* Foo/Foo\_base.wat : Wasm code
+* Foo/Foo\_interface.wat : Interface annotations
+* Foo/Foo.js : JS code to load and run Foo demo
+
+Top-level scripts:
+
+* webIDL.js : runtime polyfill, reads custom section and interprets it
+* idl\_custom\_binary.py : script to parse @interface declarations from .wat and
+  build the "interface-types" custom section
+* Makefile : rules to build .wasm files from .wats
+
 ## Interface Types
 
 By convention, Interface Types are capitalized, where Wasm types are not (e.g.

@@ -171,7 +171,7 @@ function polyfill(module, imports, getExports) {
     };
   }
 
-  var bindingSections = WebAssembly.Module.customSections(module, 'webIDLBindings');
+  var bindingSections = WebAssembly.Module.customSections(module, 'interface-types');
   for (var section = 0; section < bindingSections.length; ++section) {
     var bytes = new Uint8Array(bindingSections[section]);
     var byteIndex = 0;

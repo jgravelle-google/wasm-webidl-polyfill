@@ -272,7 +272,7 @@ def main(args):
   outfile = args[1]
   contents = open(infile, 'r').read()
   data = parse_interface(contents)
-  binary = custom_section_binary('webIDLBindings', data)
+  binary = custom_section_binary('interface-types', data)
   with open(outfile, 'wb') as f:
     f.write(bytearray(binary))
   return 0
