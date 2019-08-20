@@ -1,3 +1,6 @@
+CXX=/s/wbin/clang++
+COMPILE=$(CXX) --target=wasm32 -nostdlib -O1 \
+	-Wl,--no-entry,--allow-undefined,--export-table
 FILES=\
 anyref/anyref.wasm \
 callbacks/callbacks.wasm \
@@ -13,10 +16,9 @@ clean:
 	rm -f $(FILES)
 .PHONY: clean
 
-callbacks/callbacks_base.wat: callbacks/callbacks.cpp
-	/s/wbin/clang++ callbacks/callbacks.cpp --target=wasm32 -o callbacks/callbacks_base.wasm \
-		-nostdlib -Wl,--no-entry,--allow-undefined,--export-table -O1
-	wasm2wat callbacks/callbacks_base.wasm -f -o callbacks/callbacks_base.wat
+%_base.wat: %.cpp
+	$(COMPILE) $^ -o $^.wasm
+	wasm2wat $^.wasm -f -o $@
 
 %.wat: %_base.wat %_interface.wat
 	cat $^ > $@
