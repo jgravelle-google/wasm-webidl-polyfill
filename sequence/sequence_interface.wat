@@ -1,4 +1,11 @@
 ;; Interface
+(@interface export "alloc" (param i32) (result i32))
+(@interface export "strlen" (param i32) (result i32))
+(@interface export "writeNullByte" (param i32 i32) (result i32))
+(@interface export "getMessage" (param i32) (result i32))
+(@interface export "getScore" (param i32) (result i32))
+(@interface export "makeComment" (param i32 i32) (result i32))
+(@interface export "addComment" (param i32))
 
 (@interface type Comment struct
   (field "message" String)
@@ -8,11 +15,41 @@
 (@interface func $display (import "js" "display")
   (param Comment)
 )
+(@interface adapt (import "js" "display")
+  (param $ptr i32)
+  make-struct Comment
+
+  ;; Set message
+  arg.get $ptr
+  call-export "getMessage"
+  arg.get $ptr
+  call-export "getMessage"
+  call-export "strlen"
+  read-utf8
+  set-field "message"
+
+  ;; Set score
+  arg.get $ptr
+  call-export "getScore"
+  set-field "score"
+
+  call-import $display
+)
 
 (@interface adapt (export "addComment")
   (param $comment Comment)
-  ;; todo
+  ;; Get message
+  arg.get $comment
+  get-field "message"
+  write-utf8 "alloc"
+  call-export "writeNullByte"
+
+  ;; Get score
+  arg.get $comment
+  get-field "score"
+
+  call-export "makeComment"
+  call-export "addComment"
 )
 
-(@interface forward (export "init"))
 (@interface forward (export "displayAll"))

@@ -16,7 +16,6 @@ var wasmImports = {
 async function run() {
   const wasm = await webIDL.loadWasm('sequence/sequence.wasm', wasmImports);
   const ex = wasm.exports;
-  ex.init();
 
   ex.addComment({score: 2019, message: "Test post"});
   ex.addComment({score: -14, message: "Cats are overrated"});
