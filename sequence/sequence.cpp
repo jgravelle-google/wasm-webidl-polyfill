@@ -19,6 +19,9 @@ extern "C" {
     while (*str++) len++;
     return len;
   }
+  EXPORT void writeNullByte(char* str, int len) {
+    str[len] = 0;
+  }
 
   EXPORT char* getMessage(Comment* comment) {
     return comment->message;
