@@ -1,16 +1,36 @@
 #define IMPORT(ns, n) __attribute__((import_module(ns), import_name(n)))
 #define EXPORT __attribute__((used))
 
+int allocPtr = 2048;
+
 struct Comment {
   char* message;
   int score;
 };
+
 extern "C" {
+  EXPORT void* alloc(int size) {
+    void* ptr = (void*)allocPtr;
+    allocPtr += size + 1;
+    return ptr;
+  }
+  EXPORT int strlen(char* str) {
+    int len = 0;
+    while (*str++) len++;
+    return len;
+  }
+
   EXPORT char* getMessage(Comment* comment) {
     return comment->message;
   }
   EXPORT int getScore(Comment* comment) {
     return comment->score;
+  }
+  EXPORT Comment* makeComment(char* message, int score) {
+    Comment* result = (Comment*)alloc(sizeof(Comment));
+    result->message = message;
+    result->score = score;
+    return result;
   }
 }
 
@@ -43,20 +63,7 @@ void sortComments() {
   }
 }
 
-int allocPtr = 2048;
-
 extern "C" {
-  EXPORT char* alloc(int size) {
-    char* ptr = (char*)allocPtr;
-    allocPtr += size + 1;
-    return ptr;
-  }
-  EXPORT int strlen(char* str) {
-    int len = 0;
-    while (*str++) len++;
-    return len;
-  }
-
   EXPORT void addComment(Comment comment) {
     storedComments[numComments++] = comment;
   }
