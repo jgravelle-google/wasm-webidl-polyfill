@@ -170,11 +170,24 @@ def parse_interface(contents):
     results = []
     instrs = []
 
-    i = 3
+    class InstReader(object):
+      def __init__(self, i):
+        self.i = i
+
+      def peek(self):
+        return elem[self.i]
+      def next(self):
+        ret = self.peek()
+        self.i += 1
+        return ret
+      def done(self):
+        return self.i >= len(elem)
+
+    reader = InstReader(i=3)
     # read params + results
     param_name_idx = {}
-    while i < len(elem):
-      s = elem[i]
+    while not reader.done():
+      s = reader.peek()
       if s[0] == 'param':
         param_name = s[1]
         param_name_idx[param_name] = len(params)
@@ -185,49 +198,44 @@ def parse_interface(contents):
       else:
         # stop at instructions
         break
-      i += 1
+      reader.next()
     # read instructions
-    def next():
-      nonlocal i
-      ret = elem[i]
-      i += 1
-      return ret
-    while i < len(elem):
-      instr = next()
+    while not reader.done():
+      instr = reader.next()
       if instr == 'arg.get':
-        arg = next()
+        arg = reader.next()
         assert arg in param_name_idx, (
           'Missing param ' + arg + ' in ' + str(param_name_idx)
         )
         idx = param_name_idx[arg]
         instrs.append([0x00, idx])
       elif instr == 'call':
-        arg = next()
+        arg = reader.next()
         assert arg in import_name_idx, (
           'Missing import ' + arg + ' in ' + str(import_name_idx)
         )
         idx = import_name_idx[arg]
         instrs.append([0x01, idx])
       elif instr == 'call-export':
-        arg = next()
+        arg = reader.next()
         instrs.append([0x02] + str_encode(arg[1:-1]))
       elif instr == 'read-utf8':
         instrs.append([0x03])
       elif instr == 'write-utf8':
-        arg = next()
+        arg = reader.next()
         instrs.append([0x04] + str_encode(arg[1:-1]))
       elif instr == 'as-wasm':
-        arg = next()
+        arg = reader.next()
         instrs.append([0x05, WASM_TYPES[arg]])
       elif instr == 'as-interface':
-        arg = next()
+        arg = reader.next()
         instrs.append([0x06, INTERFACE_TYPES[arg]])
       elif instr == 'table-ref-add':
         instrs.append([0x07])
       elif instr == 'table-ref-get':
         instrs.append([0x08])
       elif instr == 'call-method':
-        arg = next()
+        arg = reader.next()
         assert arg in import_name_idx, (
           'Missing import ' + arg + ' in ' + str(import_name_idx)
         )
