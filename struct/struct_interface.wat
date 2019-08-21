@@ -33,7 +33,7 @@
   call-export "getScore"
   set-field "score"
 
-  call $display
+  call-import $display
 )
 
 (@interface adapt (export "addComment")

@@ -11,7 +11,7 @@
   arg.get $ptr
   call-export "strlen"
   read-utf8
-  call $log
+  call-import $log
 )
 
 (@interface func $title (import "host" "document_title")
@@ -19,7 +19,7 @@
 )
 (@interface adapt (import "host" "document_title")
   (result i32)
-  call $title
+  call-import $title
   write-utf8 "alloc"
   call-export "write_null_byte"
 )

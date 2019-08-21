@@ -7,7 +7,7 @@
   (func $document_title (result i32))
 )
 
-(import "env" "memory" (memory $0 256 256))
+(memory (export "memory") 256 256)
 
 ;; C-style string
 (data (i32.const 16) "Hello world\00")

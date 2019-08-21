@@ -39,7 +39,7 @@ Type | Encoding | Description
 Instruction | Opcode | Immediates | Signature | Description
 ------------|--------|------------|-----------|-------------
 `arg.get` | 0x00 | param-index | [] -> [ty(param)] | Access the function's arguments
-`call` | 0x01 | import-index | sig(import) | Call a function import (Interface types)
+`call-import` | 0x01 | import-index | sig(import) | Call a function import (Interface types)
 `call-export` | 0x02 | export-name | sig(export) | Call a function export (Wasm types)
 `read-utf8` | 0x03 | | [i32, i32] -> [String] | Read a string out of memory, given a pointer + length
 `write-utf8` | 0x04 | export-name | [String] -> [i32, i32] | Write a string into memory, return pointer + length
