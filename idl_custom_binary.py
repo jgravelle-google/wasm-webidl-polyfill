@@ -237,7 +237,7 @@ def parse_interface(contents):
         )
         idx = param_name_idx[arg]
         instrs.append([0x00, idx])
-      elif instr == 'call-import':
+      elif instr == 'call':
         arg = reader.next()
         assert arg in import_name_idx, (
           'Missing import ' + arg + ' in ' + str(import_name_idx)

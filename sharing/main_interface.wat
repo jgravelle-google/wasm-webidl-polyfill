@@ -11,7 +11,7 @@
   arg.get $ptr
   arg.get $len
   read-utf8
-  call-import $cLog
+  call $cLog
 )
 
 (@interface forward (export "main"))

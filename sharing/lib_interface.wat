@@ -15,7 +15,7 @@
   arg.get $str
   call-export "strlen"
   read-utf8
-  call-import $log
+  call $log
 )
 
 (@interface adapt (export "cLog")

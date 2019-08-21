@@ -20,7 +20,7 @@
   arg.get $str
   call-export "strlen"
   read-utf8
-  call-import $getElem
+  call $getElem
   table-ref-add
 )
 (@interface adapt (import "host" "getContext")
@@ -56,7 +56,7 @@
   arg.get $str
   call-export "strlen"
   read-utf8
-  call-import $setFillStyle
+  call $setFillStyle
 )
 
 (@interface forward (export "main"))
