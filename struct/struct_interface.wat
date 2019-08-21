@@ -12,6 +12,15 @@
   (field "score" Int)
 )
 
+(@interface func $readCStr
+  (param $ptr i32)
+  (result String)
+  arg.get $ptr
+  arg.get $ptr
+  call-export "strlen"
+  read-utf8
+)
+
 (@interface func $display (import "js" "display")
   (param Comment)
 )
@@ -22,10 +31,7 @@
   ;; Set message
   arg.get $ptr
   call-export "getMessage"
-  arg.get $ptr
-  call-export "getMessage"
-  call-export "strlen"
-  read-utf8
+  call $readCStr
   set-field "message"
 
   ;; Set score

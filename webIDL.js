@@ -435,10 +435,10 @@ function polyfill(module, imports, getExports) {
     debug('adapter count:', numAdapters);
     for (var i = 0; i < numAdapters; ++i) {
       debugIndent('adapter', i);
-      const isImport = readByte() == 0;
-      debug('isImport =', isImport)
+      const kind = readByte();
+      debug('kind =', kind)
       let namespace;
-      if (isImport) {
+      if (kind == 0) { // import
         namespace = readStr();
         debug('namespace =', namespace);
       }
@@ -448,10 +448,17 @@ function polyfill(module, imports, getExports) {
       const results = readList(readType, 'results');
       const instrs = readList(readInstr, 'instrs');
       debugDedent();
-      if (isImport) {
-        imports[namespace][name] = makeAdapter(name, params, results, instrs);
-      } else {
-        interface[name] = makeAdapter(name, params, results, instrs);
+      const fn = makeAdapter(name, params, results, instrs);
+      if (kind == 0) { // import
+        imports[namespace][name] = fn;
+      } else if (kind == 1) { // export
+        interface[name] = fn;
+      } else if (kind == 2) { // helper function
+        origImports.push({
+          import: fn,
+          params,
+          results,
+        })
       }
     }
 

@@ -149,7 +149,8 @@ def parse_interface(contents):
 
   # Imported function declarations
   import_funcs = []
-  import_name_idx = {}
+  next_callable_idx = 0
+  callable_name_idx = {}
   for elem in sexprs:
     if elem[0] != '@interface' or elem[1] != 'func':
       continue
@@ -158,7 +159,8 @@ def parse_interface(contents):
     # store import declaration for use in instructions later
     # e.g. '$foo' => 2
     func_name = elem[2]
-    import_name_idx[func_name] = len(import_funcs)
+    callable_name_idx[func_name] = next_callable_idx
+    next_callable_idx += 1
 
     namespace = elem[3][1][1:-1]
     name = elem[3][2][1:-1]
@@ -182,18 +184,28 @@ def parse_interface(contents):
   # Adapter function definitions
   adapters = []
   for elem in sexprs:
-    if elem[0] != '@interface' or elem[1] != 'adapt':
+    if elem[0] != '@interface':
       continue
-    if elem[2][0] == 'import':
+    if elem[1] == 'adapt' and elem[2][0] == 'import':
       namespace = elem[2][1][1:-1]
       name = elem[2][2][1:-1]
       # import == 0
       preamble = [0] + str_encode(namespace) + str_encode(name)
-    else:
-      assert elem[2][0] == 'export'
+      start_idx = 3
+    elif elem[1] == 'adapt' and elem[2][0] == 'export':
       name = elem[2][1][1:-1]
       # export == 1
       preamble = [1] + str_encode(name)
+      start_idx = 3
+    elif elem[1] == 'func' and elem[3][0] != 'import':
+      func_name = elem[2]
+      callable_name_idx[func_name] = next_callable_idx
+      next_callable_idx += 1
+      # helper func == 2
+      preamble = [2] + str_encode(func_name)
+      start_idx = 3
+    else:
+      continue
     params = []
     results = []
     instrs = []
@@ -211,7 +223,7 @@ def parse_interface(contents):
       def done(self):
         return self.i >= len(elem)
 
-    reader = InstReader(i=3)
+    reader = InstReader(start_idx)
     # read params + results
     param_name_idx = {}
     while not reader.done():
@@ -239,10 +251,10 @@ def parse_interface(contents):
         instrs.append([0x00, idx])
       elif instr == 'call':
         arg = reader.next()
-        assert arg in import_name_idx, (
-          'Missing import ' + arg + ' in ' + str(import_name_idx)
+        assert arg in callable_name_idx, (
+          'Missing function ' + arg + ' in ' + str(callable_name_idx)
         )
-        idx = import_name_idx[arg]
+        idx = callable_name_idx[arg]
         instrs.append([0x01, idx])
       elif instr == 'call-export':
         arg = reader.next()
@@ -264,10 +276,10 @@ def parse_interface(contents):
         instrs.append([0x08])
       elif instr == 'call-method':
         arg = reader.next()
-        assert arg in import_name_idx, (
-          'Missing import ' + arg + ' in ' + str(import_name_idx)
+        assert arg in callable_name_idx, (
+          'Missing function ' + arg + ' in ' + str(callable_name_idx)
         )
-        idx = import_name_idx[arg]
+        idx = callable_name_idx[arg]
         instrs.append([0x09, idx])
       elif instr == 'make-struct':
         arg = reader.next()
