@@ -4,13 +4,14 @@ import json
 import os
 import sys
 
-INTERFACE_TYPES = {
-  'Int': 0x7f,
-  'Float': 0x7e,
-  'Any': 0x7d,
-  'String': 0x7c,
-}
-WASM_TYPES = {
+TYPES = {
+  # Interface types
+  'Int': 0x7fff,
+  'Float': 0x7ffe,
+  'Any': 0x7ffd,
+  'String': 0x7ffc,
+
+  # Wasm types
   'i32': 0x7f,
   'i64': 0x7e,
   'f32': 0x7d,
@@ -19,7 +20,7 @@ WASM_TYPES = {
 }
 
 def leb_u32(value):
-  assert value >= 0, "Unsigned LEBs must have signed value"
+  assert value >= 0, "Unsigned LEBs must have positive value"
   leb = []
   while True:
     byte = value & 0x7f
@@ -94,6 +95,14 @@ def parse_interface(contents):
   idl_section = contents.split(';; Interface\n')[1].strip()
   sexprs = parse_sexprs(idl_section)
 
+  type_name_idx = {}
+  def type_leb(name):
+    # Name -> type bytes
+    if name in TYPES:
+      return leb_u32(TYPES[name])
+    assert name in type_name_idx
+    return leb_u32(type_name_idx[name])
+
   # Use export decls to avoid parsing the whole wat
   # Probably won't need this in the full version.
   export_decls = []
@@ -106,11 +115,11 @@ def parse_interface(contents):
     for s in elem[3:]:
       if s[0] == 'param':
         for p in s[1:]:
-          params.append([WASM_TYPES[p]])
+          params.append(type_leb(p))
       else:
         assert s[0] == 'result'
         for r in s[1:]:
-          results.append([WASM_TYPES[r]])
+          results.append(type_leb(r))
     export_decls.append(
       str_encode(name) +
       segment(params) +
@@ -119,17 +128,6 @@ def parse_interface(contents):
 
   # Type declarations
   type_decls = []
-  type_name_idx = {}
-  def wasm_type(name):
-    assert name in WASM_TYPES
-    return [WASM_TYPES[name]]
-  def interface_type(name):
-    # Name -> Interface type bytes
-    # TODO: in future
-    if name in INTERFACE_TYPES:
-      return [INTERFACE_TYPES[name]]
-    assert name in type_name_idx
-    return [type_name_idx[name]]
   for elem in sexprs:
     if elem[0] != '@interface' or elem[1] != 'type':
       continue
@@ -141,7 +139,7 @@ def parse_interface(contents):
       assert len(field) == 3
       assert field[0] == 'field'
       field_names.append(str_encode(field[1][1:-1]))
-      field_types.append(interface_type(field[2]))
+      field_types.append(type_leb(field[2]))
     type_name_idx[name] = len(type_decls)
     type_decls.append(
       str_encode(name) +
@@ -169,11 +167,11 @@ def parse_interface(contents):
     for s in elem[4:]:
       if s[0] == 'param':
         for p in s[1:]:
-          params.append(interface_type(p))
+          params.append(type_leb(p))
       else:
         assert s[0] == 'result'
         for r in s[1:]:
-          results.append(interface_type(r))
+          results.append(type_leb(r))
     import_funcs.append(
       str_encode(namespace) +
       str_encode(name) +
@@ -191,13 +189,11 @@ def parse_interface(contents):
       name = elem[2][2][1:-1]
       # import == 0
       preamble = [0] + str_encode(namespace) + str_encode(name)
-      readType = wasm_type
     else:
       assert elem[2][0] == 'export'
       name = elem[2][1][1:-1]
       # export == 1
       preamble = [1] + str_encode(name)
-      readType = interface_type
     params = []
     results = []
     instrs = []
@@ -223,10 +219,10 @@ def parse_interface(contents):
       if s[0] == 'param':
         param_name = s[1]
         param_name_idx[param_name] = len(params)
-        params.append(readType(s[2]))
+        params.append(type_leb(s[2]))
       elif s[0] == 'result':
         for r in s[1:]:
-          results.append(readType(r))
+          results.append(type_leb(r))
       else:
         # stop at instructions
         break
@@ -258,10 +254,10 @@ def parse_interface(contents):
         instrs.append([0x04] + str_encode(arg[1:-1]))
       elif instr == 'as-wasm':
         arg = reader.next()
-        instrs.append([0x05, WASM_TYPES[arg]])
+        instrs.append([0x05] + type_leb(arg))
       elif instr == 'as-interface':
         arg = reader.next()
-        instrs.append([0x06, INTERFACE_TYPES[arg]])
+        instrs.append([0x06] + type_leb(arg))
       elif instr == 'table-ref-add':
         instrs.append([0x07])
       elif instr == 'table-ref-get':

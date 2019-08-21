@@ -39,11 +39,19 @@ function polyfill(module, imports, getExports) {
   const refTable = [];
 
   // Type declarations
-  const interfaceTypeMap = {
-    0x7f: 'Int',
-    0x7e: 'Float',
-    0x7d: 'Any',
-    0x7c: 'String',
+  const typeMap = {
+    // Interface types
+    0x7fff: 'Int',
+    0x7ffe: 'Float',
+    0x7ffd: 'Any',
+    0x7ffc: 'String',
+
+    // Wasm types
+    0x7f: 'i32',
+    0x7e: 'i64',
+    0x7d: 'f32',
+    0x7c: 'f64',
+    0x6f: 'anyref',
   };
 
   function pop(stack) {
@@ -162,7 +170,7 @@ function polyfill(module, imports, getExports) {
     },
     makeStruct(stack) {
       debugInstr('makeStruct', this, stack);
-      const decl = interfaceTypeMap[this.ty];
+      const decl = typeMap[this.ty];
       const ret = {};
       for (var key of decl.fields) {
         ret[key] = null;
@@ -218,8 +226,22 @@ function polyfill(module, imports, getExports) {
       return bytes[byteIndex++];
     }
     function readLEB() {
-      // TODO: don't assume LEBs are <128
-      return readByte();
+      const bytes = [];
+      while (true) {
+        const byte = readByte();
+        bytes.push(byte & 0x7f);
+        if (!(byte & 0x80)) {
+          break;
+        }
+      }
+      // Bytes are stored little-endian, so read them in significance order
+      let val = 0;
+      for (let i = 0; i < bytes.length; ++i) {
+        const byte = bytes[bytes.length - i - 1];
+        val <<= 7;
+        val |= byte & 0x7f;
+      }
+      return val;
     }
     function readStr() {
       var len = readByte();
@@ -229,24 +251,10 @@ function polyfill(module, imports, getExports) {
       }
       return result;
     }
-    function readWasmType() {
-      const ty = readByte();
-      if (debugEnabled) {
-        const typeMap = {
-          0x7f: 'i32',
-          0x7e: 'i64',
-          0x7d: 'f32',
-          0x7c: 'f64',
-          0x6f: 'anyref',
-        };
-        debug('ty =', typeMap[ty]);
-      }
-      return ty;
-    }
-    function readInterfaceType() {
+    function readType() {
       // TODO: interface types may be multi-byte, and depend on a type section
-      const ty = readByte();
-      let name = interfaceTypeMap[ty];
+      const ty = readLEB();
+      let name = typeMap[ty];
       if (typeof name === 'object') {
         name = name.name;
       }
@@ -313,14 +321,14 @@ function polyfill(module, imports, getExports) {
         };
       } else if (opcode === 0x05) { // as-wasm
         debugIndent('as-wasm');
-        const ty = readWasmType();
+        const ty = readType();
         instr = {
           func: Instructions.asWasm,
           ty,
         }
       } else if (opcode === 0x06) { // as-interface
         debugIndent('as-interface');
-        const ty = readInterfaceType();
+        const ty = readType();
         instr = {
           func: Instructions.asInterface,
           ty,
@@ -345,7 +353,7 @@ function polyfill(module, imports, getExports) {
         };
       } else if (opcode === 0x0a) { // make-struct
         debugIndent('make-struct');
-        const ty = readInterfaceType();
+        const ty = readType();
         instr = {
           func: Instructions.makeStruct,
           ty,
@@ -379,8 +387,8 @@ function polyfill(module, imports, getExports) {
       debugIndent('export', i);
       const name = readStr();
       debug('name =', name);
-      const params = readList(readWasmType, 'params');
-      const results = readList(readWasmType, 'results');
+      const params = readList(readType, 'params');
+      const results = readList(readType, 'results');
       debugDedent();
       exportDecls[name] = {
         params,
@@ -396,9 +404,9 @@ function polyfill(module, imports, getExports) {
       debug('name =', name);
       const fields = readList(readStr, 'fields');
       debug('fields =', fields);
-      const types = readList(readInterfaceType, 'types');
+      const types = readList(readType, 'types');
       debugDedent();
-      interfaceTypeMap[i] = {
+      typeMap[i] = {
         name,
         fields,
         types,
@@ -413,8 +421,8 @@ function polyfill(module, imports, getExports) {
       debug('namespace =', namespace);
       const name = readStr();
       debug('name =', name);
-      const params = readList(readInterfaceType, 'params');
-      const results = readList(readInterfaceType, 'results');
+      const params = readList(readType, 'params');
+      const results = readList(readType, 'results');
       debugDedent();
       origImports.push({
         import: imports[namespace][name],
@@ -430,18 +438,14 @@ function polyfill(module, imports, getExports) {
       const isImport = readByte() == 0;
       debug('isImport =', isImport)
       let namespace;
-      let typeReader;
       if (isImport) {
         namespace = readStr();
         debug('namespace =', namespace);
-        typeReader = readWasmType;
-      } else {
-        typeReader = readInterfaceType;
       }
       const name = readStr();
       debug('name =', name);
-      const params = readList(typeReader, 'params');
-      const results = readList(typeReader, 'results');
+      const params = readList(readType, 'params');
+      const results = readList(readType, 'results');
       const instrs = readList(readInstr, 'instrs');
       debugDedent();
       if (isImport) {
@@ -466,7 +470,9 @@ function polyfill(module, imports, getExports) {
       debugDedent();
     }
 
-    debug('unread bytes:', bytes[byteIndex] !== undefined);
+    if (bytes.length != byteIndex) {
+      throw "Invalid read: len=" + bytes.length + ", read=" + byteIndex;
+    }
   }
 
   // Effectively this automates:

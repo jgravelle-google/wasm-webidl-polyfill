@@ -29,10 +29,10 @@ Int vs i32)
 
 Type | Encoding | Description
 -----|-------|-------------
-`Any` | 0x00 | opaque reference
-`Int` | 0x01 | integer number
-`Float` | 0x02 | floating-point number
-`String` | 0x03 | string data
+`Int` | 0x7fff | integer number
+`Float` | 0x7ffe | floating-point number
+`Any` | 0x7ffd | opaque reference
+`String` | 0x7ffc | string data
 
 ## Adapter Instructions
 
