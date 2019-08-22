@@ -288,9 +288,6 @@ def parse_interface(contents):
         )
         idx = type_name_idx[arg]
         instrs.append([0x0a, idx])
-      elif instr == 'set-field':
-        arg = reader.next()
-        instrs.append([0x0b] + str_encode(arg[1:-1]))
       elif instr == 'get-field':
         arg = reader.next()
         instrs.append([0x0c] + str_encode(arg[1:-1]))

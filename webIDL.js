@@ -172,21 +172,13 @@ function polyfill(module, imports, getExports) {
       debugInstr('makeStruct', this, stack);
       const decl = typeMap[this.ty];
       const ret = {};
-      for (var key of decl.fields) {
-        ret[key] = null;
+      const args = popN(stack, decl.fields.length);
+      debug('args =', args);
+      for (var i = 0; i < decl.fields.length; ++i) {
+        ret[decl.fields[i]] = args[i];
       }
       debug('ret =', ret);
       stack.push(ret);
-      debugDedent();
-    },
-    setField(stack) {
-      debugInstr('setField', this, stack);
-      const val = pop(stack);
-      const obj = pop(stack);
-      debug('obj, val =', obj, val);
-      obj[this.field] = val;
-      debug('obj =', obj);
-      stack.push(obj);
       debugDedent();
     },
     getField(stack) {
@@ -357,14 +349,6 @@ function polyfill(module, imports, getExports) {
         instr = {
           func: Instructions.makeStruct,
           ty,
-        };
-      } else if (opcode === 0x0b) { // set-field
-        debugIndent('set-field');
-        const field = readStr();
-        debug('field =', field);
-        instr = {
-          func: Instructions.setField,
-          field,
         };
       } else if (opcode === 0x0c) { // get-field
         debugIndent('get-field');

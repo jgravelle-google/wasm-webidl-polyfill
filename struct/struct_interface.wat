@@ -26,18 +26,14 @@
 )
 (@interface adapt (import "js" "display")
   (param $ptr i32)
-  make-struct Comment
 
-  ;; Set message
   arg.get $ptr
   call-export "getMessage"
   call $readCStr
-  set-field "message"
 
-  ;; Set score
   arg.get $ptr
   call-export "getScore"
-  set-field "score"
+  make-struct Comment
 
   call $display
 )
