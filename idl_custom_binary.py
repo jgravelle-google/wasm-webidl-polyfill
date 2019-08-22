@@ -128,6 +128,7 @@ def parse_interface(contents):
 
   # Type declarations
   type_decls = []
+  type_decl_field_idx = [] # map from field names to field offsets
   for elem in sexprs:
     if elem[0] != '@interface' or elem[1] != 'type':
       continue
@@ -135,10 +136,13 @@ def parse_interface(contents):
     field_names = []
     field_types = []
     assert elem[3] == 'struct'
+    field_mapping = {}
     for field in elem[4:]:
       assert len(field) == 3
       assert field[0] == 'field'
-      field_names.append(str_encode(field[1][1:-1]))
+      field_name = field[1]
+      field_mapping[field_name] = len(field_names)
+      field_names.append(str_encode(field_name))
       field_types.append(type_leb(field[2]))
     type_name_idx[name] = len(type_decls)
     type_decls.append(
@@ -146,6 +150,7 @@ def parse_interface(contents):
       segment(field_names) +
       segment(field_types)
     )
+    type_decl_field_idx.append(field_mapping)
 
   # Imported function declarations
   import_funcs = []
@@ -289,8 +294,18 @@ def parse_interface(contents):
         idx = type_name_idx[arg]
         instrs.append([0x0a, idx])
       elif instr == 'get-field':
-        arg = reader.next()
-        instrs.append([0x0c] + str_encode(arg[1:-1]))
+        ty = reader.next()
+        assert ty in type_name_idx, (
+          'Missing type ' + ty + ' in ' + str(type_name_idx)
+        )
+        ty_idx = type_name_idx[ty]
+        field = reader.next()
+        field_map = type_decl_field_idx[ty_idx]
+        assert field in field_map, (
+          'Missing field ' + field + ' in ' + str(field_map)
+        )
+        field_idx = field_map[field]
+        instrs.append([0x0c] + leb_u32(ty_idx) + leb_u32(field_idx))
       else:
         assert False, 'Unknown instr: ' + str(instr)
     adapters.append(

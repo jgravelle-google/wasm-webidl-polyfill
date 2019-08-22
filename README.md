@@ -49,7 +49,7 @@ Instruction | Opcode | Immediates | Signature | Description
 `table-ref-get` | 0x08 | | [i32] -> [Any] | Given an index, return the reference associated
 `call-method` | 0x09 | import-index | sig(import) | Call a function import, with the first argument bound as the `this` parameter
 `make-struct` | 0x0a| type-index | fields(struct) -> [struct] | Creates a struct object of a given type
-`get-field` | 0x0c| field-name | [struct] -> [field(struct)] | Gets a field value from a struct object
+`get-field` | 0x0c| type, field-index | [struct] -> [field(struct)] | Gets a field value from a struct object
 
 ## Binary Format
 

@@ -8,8 +8,8 @@
 (@interface export "addComment" (param i32))
 
 (@interface type Comment struct
-  (field "message" String)
-  (field "score" Int)
+  (field message String)
+  (field score Int)
 )
 
 (@interface func $readCStr
@@ -42,13 +42,13 @@
   (param $comment Comment)
   ;; Get message
   arg.get $comment
-  get-field "message"
+  get-field Comment message
   write-utf8 "alloc"
   call-export "writeNullByte"
 
   ;; Get score
   arg.get $comment
-  get-field "score"
+  get-field Comment score
 
   call-export "makeComment"
   call-export "addComment"
