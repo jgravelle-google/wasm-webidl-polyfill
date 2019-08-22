@@ -15,10 +15,12 @@
 (@interface func $readCStr
   (param $ptr i32)
   (result String)
-  arg.get $ptr
-  arg.get $ptr
-  call-export "strlen"
-  read-utf8
+  (read-utf8
+    (arg.get $ptr)
+    (call-export "strlen"
+      (arg.get $ptr)
+    )
+  )
 )
 
 (@interface func $display (import "js" "display")
@@ -27,28 +29,25 @@
 (@interface adapt (import "js" "display")
   (param $ptr i32)
 
-  arg.get $ptr
-  call-export "getMessage"
-  call $readCStr
-
-  arg.get $ptr
-  call-export "getScore"
-  make-struct Comment
-
-  call $display
+  (call $display
+    (make-struct Comment
+      (call $readCStr
+        (call-export "getMessage" (arg.get $ptr))
+      )
+      (call-export "getScore" (arg.get $ptr))
+    )
+  )
 )
 
 (@interface adapt (export "addComment")
   (param $comment Comment)
   ;; Get message
-  arg.get $comment
-  get-field Comment message
-  write-utf8 "alloc"
+  (write-utf8 "alloc"
+    (get-field Comment message (arg.get $comment))
+  )
   call-export "writeNullByte"
 
-  ;; Get score
-  arg.get $comment
-  get-field Comment score
+  (get-field Comment score (arg.get $comment))
 
   call-export "makeComment"
   call-export "addComment"

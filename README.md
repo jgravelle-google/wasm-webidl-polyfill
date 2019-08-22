@@ -73,12 +73,12 @@ bytes of the string.
 
 ### Custom section preamble
 
-The bindings are represented as a custom section with the name `webIDLBindings`.
-Custom sections follow a standard preamble:
+The bindings are represented as a custom section with the name
+`interface-types`. Custom sections follow a standard preamble:
 ```
 0x00 ;; section ID, 0=custom
 leb_u32(size) ;; size of the section
-string("webIDLBindings") ;; name of the section
+string("interface-types") ;; name of the section
 ```
 
 ### Exported function declarations

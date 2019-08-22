@@ -82,6 +82,23 @@ def parse_sexprs(text):
         cur += c
   return stack[0]
 
+# Converts folded SExpressions into unfolded
+#  e.g. (add (mul 3 4) (neg 2)) => (mul 3 4) (neg 2) add
+def unfold(sexpr, top_level=True):
+  if not isinstance(sexpr, list):
+    return sexpr
+  result = []
+  prefix = []
+  for elem in sexpr:
+    if isinstance(elem, list):
+      if top_level:
+        result += unfold(elem, top_level=False)
+      else:
+        prefix += unfold(elem, top_level=False)
+    else:
+      result.append(elem)
+  return prefix + result
+
 def str_encode(text):
   return leb_u32(len(text)) + [ord(c) for c in text]
 
@@ -196,43 +213,29 @@ def parse_interface(contents):
       name = elem[2][2][1:-1]
       # import == 0
       preamble = [0] + str_encode(namespace) + str_encode(name)
-      start_idx = 3
+      read_idx = 3
     elif elem[1] == 'adapt' and elem[2][0] == 'export':
       name = elem[2][1][1:-1]
       # export == 1
       preamble = [1] + str_encode(name)
-      start_idx = 3
+      read_idx = 3
     elif elem[1] == 'func' and elem[3][0] != 'import':
       func_name = elem[2]
       callable_name_idx[func_name] = next_callable_idx
       next_callable_idx += 1
       # helper func == 2
       preamble = [2] + str_encode(func_name)
-      start_idx = 3
+      read_idx = 3
     else:
       continue
     params = []
     results = []
     instrs = []
 
-    class InstReader(object):
-      def __init__(self, i):
-        self.i = i
-
-      def peek(self):
-        return elem[self.i]
-      def next(self):
-        ret = self.peek()
-        self.i += 1
-        return ret
-      def done(self):
-        return self.i >= len(elem)
-
-    reader = InstReader(start_idx)
     # read params + results
     param_name_idx = {}
-    while not reader.done():
-      s = reader.peek()
+    while read_idx < len(elem):
+      s = elem[read_idx]
       if s[0] == 'param':
         param_name = s[1]
         param_name_idx[param_name] = len(params)
@@ -243,8 +246,24 @@ def parse_interface(contents):
       else:
         # stop at instructions
         break
-      reader.next()
+      read_idx += 1
+
     # read instructions
+    class InstReader(object):
+      def __init__(self, elems):
+        self.elems = unfold(elems)
+        self.i = 0
+
+      def peek(self):
+        return self.elems[self.i]
+      def next(self):
+        ret = self.peek()
+        self.i += 1
+        return ret
+      def done(self):
+        return self.i >= len(self.elems)
+
+    reader = InstReader(elem[read_idx:])
     while not reader.done():
       instr = reader.next()
       if instr == 'arg.get':
