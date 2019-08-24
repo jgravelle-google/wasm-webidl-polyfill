@@ -159,7 +159,8 @@ def parse_interface(contents):
       assert field[0] == 'field'
       field_name = field[1]
       field_mapping[field_name] = len(field_names)
-      field_names.append(str_encode(field_name))
+      # remove leading '$'
+      field_names.append(str_encode(field_name[1:]))
       field_types.append(type_leb(field[2]))
     type_name_idx[name] = len(type_decls)
     type_decls.append(
