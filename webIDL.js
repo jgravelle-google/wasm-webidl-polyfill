@@ -168,8 +168,8 @@ function polyfill(module, imports, getExports) {
       }
       debugDedent();
     },
-    makeStruct(stack) {
-      debugInstr('makeStruct', this, stack);
+    makeRecord(stack) {
+      debugInstr('makeRecord', this, stack);
       const decl = typeMap[this.ty];
       debug('decl =', decl);
       const ret = {};
@@ -348,11 +348,11 @@ function polyfill(module, imports, getExports) {
           func: Instructions.callMethod,
           importIdx,
         };
-      } else if (opcode === 0x0a) { // make-struct
-        debugIndent('make-struct');
+      } else if (opcode === 0x0a) { // make-record
+        debugIndent('make-record');
         const ty = readType();
         instr = {
-          func: Instructions.makeStruct,
+          func: Instructions.makeRecord,
           ty,
         };
       } else if (opcode === 0x0c) { // get-field

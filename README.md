@@ -48,8 +48,8 @@ Instruction | Opcode | Immediates | Signature | Description
 `table-ref-add` | 0x07 | | [Any] -> [i32] | Add a reference to a table, returns an index for that reference
 `table-ref-get` | 0x08 | | [i32] -> [Any] | Given an index, return the reference associated
 `call-method` | 0x09 | import-index | sig(import) | Call a function import, with the first argument bound as the `this` parameter
-`make-struct` | 0x0a| type-index | fields(struct) -> [struct] | Creates a struct object of a given type
-`get-field` | 0x0c| type, field-index | [struct] -> [field(struct)] | Gets a field value from a struct object
+`make-record` | 0x0a| type-index | fields(record) -> [record] | Creates a record object of a given type
+`get-field` | 0x0c| type, field-index | [record] -> [field(record)] | Gets a field value from a record object
 
 ## Binary Format
 

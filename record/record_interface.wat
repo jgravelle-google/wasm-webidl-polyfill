@@ -7,7 +7,7 @@
 (@interface export "makeComment" (param i32 i32) (result i32))
 (@interface export "addComment" (param i32))
 
-(@interface type Comment struct
+(@interface type Comment record
   (field message String)
   (field score Int)
 )
@@ -30,7 +30,7 @@
   (param $ptr i32)
 
   (call $display
-    (make-struct Comment
+    (make-record Comment
       (call $readCStr
         (call-export "getMessage" (arg.get $ptr))
       )

@@ -152,7 +152,7 @@ def parse_interface(contents):
     name = elem[2]
     field_names = []
     field_types = []
-    assert elem[3] == 'struct'
+    assert elem[3] == 'record'
     field_mapping = {}
     for field in elem[4:]:
       assert len(field) == 3
@@ -305,7 +305,7 @@ def parse_interface(contents):
         )
         idx = callable_name_idx[arg]
         instrs.append([0x09, idx])
-      elif instr == 'make-struct':
+      elif instr == 'make-record':
         arg = reader.next()
         assert arg in type_name_idx, (
           'Missing type ' + arg + ' in ' + str(type_name_idx)
