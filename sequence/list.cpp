@@ -19,11 +19,10 @@ struct List {
     Node* prev = nullptr;
     while (*cur != nullptr) {
       prev = *cur;
-      cur = &cur->next;
+      cur = &(*cur)->next;
     }
-    Node* node = (Node*)alloc(sizeof(Node));
-    new (node) Node();
-    node->prev = prev;
+    void* buf = alloc(sizeof(Node));
+    Node* node = new (buf) Node(item, prev);
     if (prev != nullptr) {
       prev->next = node;
     }

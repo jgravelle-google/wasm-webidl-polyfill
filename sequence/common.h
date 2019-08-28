@@ -11,4 +11,9 @@ void* alloc(int size) {
   return ptr;
 }
 
+// Need to provide a placement new because it's defined in libcxx
+void* operator new(unsigned long, void* buffer) {
+  return buffer;
+}
+
 #endif // __COMMON_H__

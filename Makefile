@@ -2,11 +2,11 @@ CXX=/s/wbin/clang++
 COMPILE=$(CXX) --target=wasm32 -nostdlib -O1 \
 	-Wl,--no-entry,--allow-undefined,--export-table
 FILES=\
-anyref/anyref.wasm \
 callbacks/callbacks.wasm \
 hello_world/hello_world.wasm \
+sequence/array_base.wat sequence/list_base.wat \
 sharing/lib.wasm sharing/main.wasm \
-to_upper/to_upper.wasm \
+record/record.wasm \
 webgl/webgl.wasm \
 
 all: $(FILES)
