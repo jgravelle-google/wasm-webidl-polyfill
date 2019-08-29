@@ -45,6 +45,7 @@ function polyfill(module, imports, getExports) {
     0x7ffe: 'Float',
     0x7ffd: 'Any',
     0x7ffc: 'String',
+    0x7ffb: 'Seq',
 
     // Wasm types
     0x7f: 'i32',
@@ -195,6 +196,31 @@ function polyfill(module, imports, getExports) {
       stack.push(val);
       debugDedent();
     },
+    constVal(stack) {
+      debugInstr('constVal', this, stack);
+      const val = this.val;
+      debug('val =', val);
+      stack.push(val);
+      debugDedent();
+    },
+    foldSeq(stack) {
+      debugInstr('foldSeq', this, stack);
+      const imp = origImports[this.importIdx];
+      debug('import decl =', imp);
+      let val = pop(stack);
+      const list = pop(stack);
+      debug('list =', list);
+      debug('val =', val);
+      for (let i = 0; i < list.length; ++i) {
+        const elem = list[i];
+        debugIndent('elem', i, '=', elem);
+        val = imp.import.apply(null, [val, elem]);
+        debugDedent();
+        debug('val =', val);
+      }
+      stack.push(val);
+      debugDedent();
+    },
   }
 
   const interface = {};
@@ -256,6 +282,9 @@ function polyfill(module, imports, getExports) {
         name = name.name;
       }
       debug('ty =', ty, ":", name);
+      if (ty === 0x7ffb) { // seq
+        return [ty].concat(readType());
+      }
       return ty;
     }
 
@@ -281,7 +310,7 @@ function polyfill(module, imports, getExports) {
       let instr;
       if (opcode === 0x00) { // arg.get
         debugIndent('arg.get');
-        const arg = readByte();
+        const arg = readLEB();
         debug('arg =', arg);
         instr = {
           func: Instructions.argGet,
@@ -289,7 +318,7 @@ function polyfill(module, imports, getExports) {
         };
       } else if (opcode === 0x01) { // call
         debugIndent('call');
-        const importIdx = readByte();
+        const importIdx = readLEB();
         debug('importIdx =', importIdx);
         instr = {
           func: Instructions.call,
@@ -342,7 +371,7 @@ function polyfill(module, imports, getExports) {
         };
       } else if (opcode === 0x09) { // call-method
         debugIndent('call-method');
-        const importIdx = readByte();
+        const importIdx = readLEB();
         debug('importIdx =', importIdx);
         instr = {
           func: Instructions.callMethod,
@@ -365,6 +394,22 @@ function polyfill(module, imports, getExports) {
           func: Instructions.getField,
           ty,
           field,
+        };
+      } else if (opcode === 0x0d) { // const
+        debugIndent('const');
+        const ty = readType();
+        const val = readLEB();
+        instr = {
+          func: Instructions.constVal,
+          ty,
+          val,
+        };
+      } else if (opcode === 0x0e) { // fold-seq
+        debugIndent('fold-seq');
+        const importIdx = readLEB();
+        instr = {
+          func: Instructions.foldSeq,
+          importIdx,
         };
       } else {
         throw 'Unknown opcode: ' + opcode;

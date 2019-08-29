@@ -5,7 +5,7 @@
 #define EXPORT __attribute__((used))
 
 int allocPtr = 4096;
-void* alloc(int size) {
+EXPORT void* alloc(int size) {
   void* ptr = (void*)allocPtr;
   allocPtr += size;
   return ptr;
@@ -14,6 +14,12 @@ void* alloc(int size) {
 // Need to provide a placement new because it's defined in libcxx
 void* operator new(unsigned long, void* buffer) {
   return buffer;
+}
+
+EXPORT int strlen(const char* str) {
+  int len = 0;
+  while (*str++) len++;
+  return len;
 }
 
 #endif // __COMMON_H__

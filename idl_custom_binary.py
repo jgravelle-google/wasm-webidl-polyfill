@@ -10,6 +10,7 @@ TYPES = {
   'Float': 0x7ffe,
   'Any': 0x7ffd,
   'String': 0x7ffc,
+  'Seq': 0x7ffb,
 
   # Wasm types
   'i32': 0x7f,
@@ -113,12 +114,16 @@ def parse_interface(contents):
   sexprs = parse_sexprs(idl_section)
 
   type_name_idx = {}
-  def type_leb(name):
+  def type_leb(ty):
     # Name -> type bytes
-    if name in TYPES:
-      return leb_u32(TYPES[name])
-    assert name in type_name_idx
-    return leb_u32(type_name_idx[name])
+    if isinstance(ty, list):
+      assert ty[0] == 'Seq'
+      assert len(ty) == 2
+      return leb_u32(TYPES[ty[0]]) + type_leb(ty[1])
+    if ty in TYPES:
+      return leb_u32(TYPES[ty])
+    assert ty in type_name_idx
+    return leb_u32(type_name_idx[ty])
 
   # Use export decls to avoid parsing the whole wat
   # Probably won't need this in the full version.
@@ -273,14 +278,14 @@ def parse_interface(contents):
           'Missing param ' + arg + ' in ' + str(param_name_idx)
         )
         idx = param_name_idx[arg]
-        instrs.append([0x00, idx])
+        instrs.append([0x00] + leb_u32(idx))
       elif instr == 'call':
         arg = reader.next()
         assert arg in callable_name_idx, (
           'Missing function ' + arg + ' in ' + str(callable_name_idx)
         )
         idx = callable_name_idx[arg]
-        instrs.append([0x01, idx])
+        instrs.append([0x01] + leb_u32(idx))
       elif instr == 'call-export':
         arg = reader.next()
         instrs.append([0x02] + str_encode(arg[1:-1]))
@@ -305,14 +310,14 @@ def parse_interface(contents):
           'Missing function ' + arg + ' in ' + str(callable_name_idx)
         )
         idx = callable_name_idx[arg]
-        instrs.append([0x09, idx])
+        instrs.append([0x09] + leb_u32(idx))
       elif instr == 'make-record':
         arg = reader.next()
         assert arg in type_name_idx, (
           'Missing type ' + arg + ' in ' + str(type_name_idx)
         )
         idx = type_name_idx[arg]
-        instrs.append([0x0a, idx])
+        instrs.append([0x0a] + leb_u32(idx))
       elif instr == 'get-field':
         ty = reader.next()
         assert ty in type_name_idx, (
@@ -326,6 +331,19 @@ def parse_interface(contents):
         )
         field_idx = field_map[field]
         instrs.append([0x0c] + leb_u32(ty_idx) + leb_u32(field_idx))
+      elif instr == 'const':
+        ty = reader.next()
+        assert ty == 'i32'
+        val_str = reader.next()
+        val = int(val_str)
+        instrs.append([0x0d] + type_leb(ty) + leb_u32(val))
+      elif instr == 'fold-seq':
+        func = reader.next()
+        assert func in callable_name_idx, (
+          'Missing function ' + func + ' in ' + str(callable_name_idx)
+        )
+        idx = callable_name_idx[func]
+        instrs.append([0x0e] + leb_u32(idx))
       else:
         assert False, 'Unknown instr: ' + str(instr)
     adapters.append(

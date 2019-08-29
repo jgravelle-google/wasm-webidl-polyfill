@@ -1,5 +1,8 @@
 #include "common.h"
 
+IMPORT("js", "log") void log(int);
+IMPORT("js", "logStr") void log(const char*);
+
 template <typename T>
 class Array {
   T* buffer;
@@ -8,12 +11,15 @@ class Array {
 
 public:
   EXPORT Array() {
+    log("In Array()");
     capacity = 16;
     buffer = (T*)alloc(capacity * sizeof(T));
     count = 0;
   }
 
   EXPORT void add(T item) {
+    log("In add(item)");
+    log(item);
     if (count == capacity) {
       capacity *= 2;
       T* newbuffer = (T*)alloc(capacity * sizeof(T));
@@ -37,8 +43,12 @@ public:
 
 EXPORT int average(Array<int> array) {
   int sum = 0;
+  log("In average");
+  log(array.length());
   for (int i = 0; i < array.length(); ++i) {
+    log("---");
     sum += array[i];
+    log(i); log(array[i]); log(sum);
   }
   return sum / array.length();
 }
