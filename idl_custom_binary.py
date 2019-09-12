@@ -344,6 +344,20 @@ def parse_interface(contents):
         )
         idx = callable_name_idx[func]
         instrs.append([0x0e] + leb_u32(idx))
+      elif instr == 'add':
+        ty = reader.next()
+        assert ty == 'i32'
+        instrs.append([0x0f] + type_leb(ty))
+      elif instr == 'mem-to-seq':
+        ty = reader.next()
+        assert ty == 'i32'
+        memory_name = reader.next()
+        instrs.append([0x10] + type_leb(ty) + str_encode(memory_name[1:-1]))
+      elif instr == 'load':
+        ty = reader.next()
+        assert ty == 'i32'
+        memory_name = reader.next()
+        instrs.append([0x11] + type_leb(ty) + str_encode(memory_name[1:-1]))
       else:
         assert False, 'Unknown instr: ' + str(instr)
     adapters.append(

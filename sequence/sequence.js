@@ -20,8 +20,8 @@ async function run() {
     const ex = wasm.exports;
 
     const list = [10, 20, 14, 3, 9, 32, 6, 18];
-    console.log(ex.average(list)); // should be 14
-    // console.log(ex.reversed(list));
+    console.log('  average:', ex.average(list)); // should be 14
+    console.log('  reversed:', ex.reversed(list));
     console.log('');
   }
 }

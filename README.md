@@ -52,6 +52,9 @@ Instruction | Opcode | Immediates | Signature | Description
 `get-field` | 0x0c | type, field-index | [record] -> [field(record)] | Gets a field value from a record object
 `const` | 0x0d | type, value | [] -> [type] | Pushes a constant value. Really only i32 at the moment
 `fold-seq` | 0x0e | import-index | [Seq<T>] + sig(import) -> result(import) | Calls a function on every element of a sequence, carrying an accumulator value across
+`add` | 0x0f | type | [T, T] -> [T] | Add two numbers together
+`mem-to-seq` | 0x10 | type, memory-name | [i32, i32] -> [Seq<T>] | Loads a pointer+length into a sequence
+`load` | 0x11 | type, memory-name | [i32] -> [T] | Loads a scalar value from memory
 
 ## Binary Format
 

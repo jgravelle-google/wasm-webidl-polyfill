@@ -12,6 +12,7 @@ class Array {
 public:
   EXPORT Array() {
     log("In Array()");
+    log((int)this);
     capacity = 16;
     buffer = (T*)alloc(capacity * sizeof(T));
     count = 0;
@@ -32,7 +33,7 @@ public:
     count++;
   }
 
-  int length() {
+  EXPORT int length() {
     return count;
   }
 
@@ -54,6 +55,8 @@ EXPORT int average(Array<int> array) {
 }
 
 EXPORT Array<int> reversed(Array<int> array) {
+  log("In reversed");
+  log(array.length());
   Array<int> result;
   for (int i = 0; i < array.length(); ++i) {
     result.add(array[array.length() - i - 1]);

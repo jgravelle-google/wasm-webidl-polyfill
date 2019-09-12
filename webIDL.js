@@ -23,12 +23,13 @@ function debugInstr(name, self, stack, args) {
 }
 
 function polyfill(module, imports, getExports) {
-  var u8;
+  var u8, i32; // Memory views
   function initMemory() {
     if (u8) return;
     debug('initializing memory');
     var memory = getExports()['memory'] || imports['env'] && imports['env']['memory'];
     u8 = new Uint8Array(memory.buffer);
+    i32 = new Int32Array(memory.buffer);
   }
 
   // Export declarations, used for call-export arities
@@ -221,6 +222,38 @@ function polyfill(module, imports, getExports) {
       stack.push(val);
       debugDedent();
     },
+    add(stack) {
+      debugInstr('add', this, stack);
+      const rhs = pop(stack);
+      const lhs = pop(stack);
+      debug('lhs, rhs =', lhs, rhs);
+      const val = rhs + lhs;
+      debug('val =', val);
+      stack.push(val);
+      debugDedent();
+    },
+    memToSeq(stack) {
+      debugInstr('memToSeq', this, stack);
+      const len = pop(stack);
+      const ptr = pop(stack);
+      debug('ptr, len =', ptr, len);
+      initMemory();
+      let seq = [];
+      for (var i = 0; i < len; ++i) {
+        seq.push(i32[(ptr >> 2) + i]);
+      }
+      debug('seq =', seq);
+      stack.push(seq);
+      debugDedent();
+    },
+    loadMem(stack) {
+      debugInstr('loadMem', this, stack);
+      const ptr = pop(stack); debug('ptr =', ptr);
+      initMemory();
+      const val = i32[ptr >> 2]; debug('val =', val);
+      stack.push(val);
+      debugDedent();
+    },
   }
 
   const interface = {};
@@ -410,6 +443,31 @@ function polyfill(module, imports, getExports) {
         instr = {
           func: Instructions.foldSeq,
           importIdx,
+        };
+      } else if (opcode === 0x0f) { // add
+        debugIndent('add');
+        const ty = readType();
+        instr = {
+          func: Instructions.add,
+          ty,
+        };
+      } else if (opcode === 0x10) { // mem-to-seq
+        debugIndent('mem-to-seq');
+        const ty = readType(); debug('ty =', ty);
+        const mem = readStr(); debug('mem =', mem);
+        instr = {
+          func: Instructions.memToSeq,
+          ty,
+          mem,
+        };
+      } else if (opcode === 0x11) { // load
+        debugIndent('load');
+        const ty = readType(); debug('ty =', ty);
+        const mem = readStr(); debug('mem =', mem);
+        instr = {
+          func: Instructions.loadMem,
+          ty,
+          mem,
         };
       } else {
         throw 'Unknown opcode: ' + opcode;

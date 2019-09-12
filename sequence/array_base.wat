@@ -108,6 +108,11 @@
         (i32.const 2))))
   (func $reversed_Array<int>_ (type 3) (param i32 i32)
     (local i32 i32)
+    (call $log_char_const*_
+      (i32.const 1043))
+    (call $log_int_
+      (call $Array<int>::length__
+        (local.get 1)))
     (local.set 2
       (call $Array<int>::Array__
         (local.get 0)))
@@ -146,7 +151,9 @@
   (func $Array<int>::Array__ (type 1) (param i32) (result i32)
     (local i32)
     (call $log_char_const*_
-      (i32.const 1043))
+      (i32.const 1055))
+    (call $log_int_
+      (local.get 0))
     (i32.store offset=4
       (local.get 0)
       (i32.const 16))
@@ -163,7 +170,7 @@
   (func $Array<int>::add_int_ (type 3) (param i32 i32)
     (local i32 i32 i32 i32)
     (call $log_char_const*_
-      (i32.const 1054))
+      (i32.const 1066))
     (call $log_int_
       (local.get 1))
     (block  ;; label = @1
@@ -238,14 +245,15 @@
         (i32.const 1))))
   (table (;0;) 1 1 funcref)
   (memory (;0;) 2)
-  (global (;0;) (mut i32) (i32.const 66608))
+  (global (;0;) (mut i32) (i32.const 66624))
   (export "memory" (memory 0))
   (export "__indirect_function_table" (table 0))
   (export "_Z5alloci" (func $alloc_int_))
   (export "_Z6strlenPKc" (func $strlen_char_const*_))
   (export "_Z7average5ArrayIiE" (func $average_Array<int>_))
+  (export "_ZN5ArrayIiE6lengthEv" (func $Array<int>::length__))
   (export "_Z8reversed5ArrayIiE" (func $reversed_Array<int>_))
   (export "_ZN5ArrayIiEC2Ev" (func $Array<int>::Array__))
   (export "_ZN5ArrayIiE3addEi" (func $Array<int>::add_int_))
   (data (;0;) (i32.const 1024) "\00\10\00\00")
-  (data (;1;) (i32.const 1028) "In average\00---\00In Array()\00In add(item)\00"))
+  (data (;1;) (i32.const 1028) "In average\00---\00In reversed\00In Array()\00In add(item)\00"))
