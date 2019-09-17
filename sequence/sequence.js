@@ -12,7 +12,7 @@ const wasmImports = {
 async function run() {
   const moduleNames = [
     'array.wasm',
-    // 'list.wasm',
+    'list.wasm',
   ];
   for (const m of moduleNames) {
     console.log('Module:', m);

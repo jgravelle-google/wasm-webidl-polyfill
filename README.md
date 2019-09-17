@@ -55,6 +55,16 @@ Instruction | Opcode | Immediates | Signature | Description
 `add` | 0x0f | type | [T, T] -> [T] | Add two numbers together
 `mem-to-seq` | 0x10 | type, memory-name | [i32, i32] -> [Seq<T>] | Loads a pointer+length into a sequence
 `load` | 0x11 | type, memory-name | [i32] -> [T] | Loads a scalar value from memory
+`seq.new` | 0x12
+`list.push` | 0x13
+`repeat-until` | 0x14
+
+### Elaboration
+
+`repeat-until` takes two functions, a continuation predicate, and a next-step
+predicate. Given an `$cond` of type `[b] -> [i32]`, and a `$iter` of type
+`[a, b] -> [a, b]`, then the whole expression `repeat-until $cond $iter` has
+type `[a, b] -> [a]`, where `a` is an accumulator, and `b` is a state parameter.
 
 ## Binary Format
 
@@ -64,10 +74,10 @@ should align with the proposed binary format.
 There are five subsections:
 
 1. Exported function declarations
-1. Type declarations
-1. Imported function declarations
-1. Adapter functions
-1. Forwarded exports
+2. Type declarations
+3. Imported function declarations
+4. Adapter functions
+5. Forwarded exports
 
 ### Common patterns
 

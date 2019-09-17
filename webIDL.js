@@ -1,5 +1,4 @@
 var debugEnabled = false;
-// debugEnabled = true;
 var debugIndentLevel = 0;
 function debug() {
   if (debugEnabled) {
@@ -254,7 +253,40 @@ function polyfill(module, imports, getExports) {
       stack.push(val);
       debugDedent();
     },
-  }
+    seqNew(stack) {
+      debugInstr('seqNew', this, stack);
+      stack.push([]);
+      debugDedent();
+    },
+    listPush(stack) {
+      debugInstr('listPush', this, stack);
+      const val = pop(stack); debug('val =', val);
+      const seq = pop(stack); debug('seq =', seq);
+      seq.push(val); debug('seq =', seq);
+      stack.push(seq);
+      debugDedent();
+    },
+    repeatWhile(stack) {
+      debugInstr('repeatWhile', this, stack);
+      const cond = origImports[this.condIdx]; debug('cond =', cond);
+      const step = origImports[this.stepIdx]; debug('step =', step);
+      let val = pop(stack); debug('val =', val);
+      let acc = pop(stack); debug('acc =', acc);
+      while (true) {
+        debugIndent('cond');
+        const run = cond.import.apply(null, [val]);
+        debugDedent(); debug('cond(val) =', run);
+        if (!run) { break }
+        debugIndent('step');
+        const results = step.import.apply(null, [acc, val]);
+        debugDedent();
+        acc = results[0]; debug('acc =', acc);
+        val = results[1]; debug('val =', val);
+      }
+      stack.push(acc); debug('acc =', acc);
+      debugDedent();
+    },
+  };
 
   const interface = {};
 
@@ -267,8 +299,12 @@ function polyfill(module, imports, getExports) {
         instr.func.apply(instr, [stack, arguments]);
       }
       debugDedent();
-      if (results.length > 0) {
+      if (results.length == 1) {
+        debug('single return:', stack[stack.length - 1]);
         return stack[stack.length - 1];
+      } else if (results.length > 1) {
+        debug('multiple return:', stack);
+        return stack;
       }
     };
   }
@@ -469,6 +505,27 @@ function polyfill(module, imports, getExports) {
           ty,
           mem,
         };
+      } else if (opcode === 0x12) { // seq.new
+        debugIndent('seq.new');
+        const ty = readType(); debug('ty =', ty);
+        instr = {
+          func: Instructions.seqNew,
+          ty,
+        };
+      } else if (opcode === 0x13) { // list.push
+        debugIndent('list.push');
+        instr = {
+          func: Instructions.listPush,
+        };
+      } else if (opcode === 0x14) { // repeat-while
+        debugIndent('repeat-while');
+        const condIdx = readLEB(); debug('condIdx =', condIdx);
+        const stepIdx = readLEB(); debug('stepIdx =', stepIdx);
+        instr = {
+          func: Instructions.repeatWhile,
+          condIdx,
+          stepIdx,
+        };
       } else {
         throw 'Unknown opcode: ' + opcode;
       }
@@ -656,7 +713,8 @@ function jsToWasmFunc(func, sig) {
   return wrappedFunc;
 }
 
-async function loadWasm(filename, imports) {
+async function loadWasm(filename, imports, enableDebug) {
+  if (enableDebug) { debugEnabled = true; }
   imports = imports || {};
   var bytes;
   if (typeof read === 'function') {

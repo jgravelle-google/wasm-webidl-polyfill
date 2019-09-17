@@ -1,11 +1,14 @@
 #include "common.h"
 
+IMPORT("js", "log") void log(int);
+IMPORT("js", "logStr") void log(const char*);
+
 template <typename T>
 struct List {
   struct Node {
     T item;
-    Node* prev;
     Node* next;
+    Node* prev;
     Node(T item, Node* prev)
       : item(item), prev(prev), next(nullptr) {}
   } *first, *last;
@@ -15,6 +18,8 @@ struct List {
     : first(nullptr), last(nullptr), count(0) {}
 
   EXPORT void add(T item) {
+    log("In add");
+    log(item);
     Node** cur = &first;
     Node* prev = nullptr;
     while (*cur != nullptr) {
@@ -41,7 +46,10 @@ EXPORT int average(List<int> list) {
 }
 
 EXPORT List<int> reversed(List<int> list) {
+  log("In reversed");
+  log((int)&list);
   List<int> result;
+  log((int)&result);
   for (auto node = list.last; node != nullptr; node = node->prev) {
     result.add(node->item);
   }

@@ -358,6 +358,23 @@ def parse_interface(contents):
         assert ty == 'i32'
         memory_name = reader.next()
         instrs.append([0x11] + type_leb(ty) + str_encode(memory_name[1:-1]))
+      elif instr == 'seq.new':
+        ty = reader.next()
+        instrs.append([0x12] + type_leb(ty))
+      elif instr == 'list.push':
+        instrs.append([0x13])
+      elif instr == 'repeat-while':
+        cond = reader.next()
+        assert cond in callable_name_idx, (
+          'Missing function ' + cond + ' in ' + str(callable_name_idx)
+        )
+        cond_idx = callable_name_idx[cond]
+        step = reader.next()
+        assert step in callable_name_idx, (
+          'Missing function ' + step + ' in ' + str(callable_name_idx)
+        )
+        step_idx = callable_name_idx[step]
+        instrs.append([0x14] + leb_u32(cond_idx) + leb_u32(step_idx))
       else:
         assert False, 'Unknown instr: ' + str(instr)
     adapters.append(
