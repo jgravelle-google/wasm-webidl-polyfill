@@ -5,7 +5,6 @@
 (@interface export "_Z8reversed5ArrayIiE" (param i32 i32))
 (@interface export "_ZN5ArrayIiEC2Ev" (param i32) (result i32))
 (@interface export "_ZN5ArrayIiE3addEi" (param i32 i32))
-(@interface export "_ZN5ArrayIiE6lengthEv" (param i32) (result i32))
 
 ;; Printf debugging!
 (@interface func $logStr (import "js" "log")
@@ -20,16 +19,26 @@
   call $logStr
 )
 
-(@interface func $addToArray
-  (param $ptr i32) (param $item Int)
+(@interface func $setArrayLen
+  (param $ignore i32) (param $len i32) (param $ptr i32)
   (result i32)
   arg.get $ptr
-  arg.get $item
-  as-wasm i32
-  call-export "_ZN5ArrayIiE3addEi"
+  const i32 8
+  add i32
+  arg.get $len
+  store i32 "memory"
   arg.get $ptr
 )
-
+(@interface func $seqToArray
+  (param $items (Seq Int)) (param $ptr i32)
+  (result i32)
+  arg.get $items
+  arg.get $ptr
+  load i32 "memory"
+  seq-to-mem i32 "memory"
+  arg.get $ptr
+  call $setArrayLen
+)
 (@interface adapt (export "average")
   (param $items (Seq Int))
   (result Int)
@@ -37,10 +46,11 @@
   const i32 16 ;; >= sizeof(Array<int>)
   call-export "_Z5alloci"
   call-export "_ZN5ArrayIiEC2Ev"
-  fold-seq $addToArray ;; [(Seq Int), i32] -> [i32]
+  call $seqToArray
   call-export "_Z7average5ArrayIiE"
   as-interface Int
 )
+
 (@interface func $reversed
   (param $input i32)
   (param $result i32)
@@ -56,7 +66,9 @@
 
   ;; len
   arg.get $result
-  call-export "_ZN5ArrayIiE6lengthEv"
+  const i32 8
+  add i32
+  load i32 "memory"
 
   mem-to-seq i32 "memory"
 )
@@ -69,7 +81,7 @@
   const i32 16
   call-export "_Z5alloci"
   call-export "_ZN5ArrayIiEC2Ev"
-  fold-seq $addToArray
+  call $seqToArray
 
   ;; result = Array()
   const i32 16

@@ -4,7 +4,7 @@ COMPILE=$(CXX) --target=wasm32 -nostdlib -O1 \
 FILES=\
 callbacks/callbacks.wasm \
 hello_world/hello_world.wasm \
-sequence/array_base.wat sequence/list_base.wat \
+sequence/array.wasm sequence/list.wasm \
 sharing/lib.wasm sharing/main.wasm \
 record/record.wasm \
 webgl/webgl.wasm \

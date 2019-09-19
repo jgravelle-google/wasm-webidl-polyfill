@@ -58,6 +58,8 @@ Instruction | Opcode | Immediates | Signature | Description
 `seq.new` | 0x12
 `list.push` | 0x13
 `repeat-until` | 0x14
+`seq-to-mem` | 0x15
+`store` | 0x16
 
 ### Elaboration
 

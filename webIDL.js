@@ -286,6 +286,26 @@ function polyfill(module, imports, getExports) {
       stack.push(acc); debug('acc =', acc);
       debugDedent();
     },
+    seqToMem(stack) {
+      debugInstr('seqToMem', this, stack);
+      const ptr = pop(stack); debug('ptr =', ptr);
+      const seq = pop(stack); debug('seq =', seq);
+      initMemory();
+      for (var i = 0; i < seq.length; ++i) {
+        i32[(ptr >> 2) + i] = seq[i];
+      }
+      stack.push(ptr);
+      stack.push(seq.length);
+      debugDedent();
+    },
+    storeMem(stack) {
+      debugInstr('storeMem', this, stack);
+      const val = pop(stack); debug('val =', val);
+      const ptr = pop(stack); debug('ptr =', ptr);
+      initMemory();
+      i32[ptr >> 2] = val;
+      debugDedent();
+    },
   };
 
   const interface = {};
@@ -525,6 +545,24 @@ function polyfill(module, imports, getExports) {
           func: Instructions.repeatWhile,
           condIdx,
           stepIdx,
+        };
+      } else if (opcode === 0x15) { // seq-to-mem
+        debugIndent('seq-to-mem');
+        const ty = readType(); debug('ty =', ty);
+        const mem = readStr(); debug('mem =', mem);
+        instr = {
+          func: Instructions.seqToMem,
+          ty,
+          mem,
+        };
+      } else if (opcode === 0x16) { // store
+        debugIndent('store');
+        const ty = readType(); debug('ty =', ty);
+        const mem = readStr(); debug('mem =', mem);
+        instr = {
+          func: Instructions.storeMem,
+          ty,
+          mem,
         };
       } else {
         throw 'Unknown opcode: ' + opcode;

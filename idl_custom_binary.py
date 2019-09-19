@@ -375,6 +375,16 @@ def parse_interface(contents):
         )
         step_idx = callable_name_idx[step]
         instrs.append([0x14] + leb_u32(cond_idx) + leb_u32(step_idx))
+      elif instr == 'seq-to-mem':
+        ty = reader.next()
+        assert ty == 'i32'
+        memory_name = reader.next()
+        instrs.append([0x15] + type_leb(ty) + str_encode(memory_name[1:-1]))
+      elif instr == 'store':
+        ty = reader.next()
+        assert ty == 'i32'
+        memory_name = reader.next()
+        instrs.append([0x16] + type_leb(ty) + str_encode(memory_name[1:-1]))
       else:
         assert False, 'Unknown instr: ' + str(instr)
     adapters.append(
